@@ -82,7 +82,7 @@ export class RolesGuard implements CanActivate {
     }
 
     // Check if user has sufficient role level using hierarchy
-    const granted = this.checkRoleHierarchy(user.role, requiredRoles);
+    const granted = this.checkRoleHierarchy(user.role as Role, requiredRoles);
 
     // Cache the decision if user has organizationId
     if (user.organizationId) {

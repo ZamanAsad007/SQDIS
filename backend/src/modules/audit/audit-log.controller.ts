@@ -10,6 +10,7 @@ import {
   HttpStatus,
   Res,
   StreamableFile,
+  Inject,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -44,6 +45,7 @@ export class AuditLogController {
     private readonly auditExportService: AuditExportService,
     private readonly auditRetentionService: AuditRetentionService,
     private readonly auditAnalyticsService: AuditAnalyticsService,
+    @Inject('FileStorageService') private readonly fileStorageService: any,
   ) {}
 
   /**

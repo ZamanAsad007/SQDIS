@@ -74,8 +74,9 @@ export class AuditLogInterceptor implements NestInterceptor {
     }
 
     // Extract resourceId from request params if configured
-    const resourceId = config.resourceIdParam
-      ? request.params[config.resourceIdParam]
+    const resourceIdParam = config.resourceIdParam ? request.params[config.resourceIdParam] : null;
+    const resourceId = resourceIdParam
+      ? Array.isArray(resourceIdParam) ? resourceIdParam[0] : resourceIdParam
       : null;
 
     // Capture request body if configured

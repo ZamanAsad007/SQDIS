@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -11,6 +11,7 @@ import { AuditRetentionService } from './services/audit-retention.service';
 import { AuditArchivalSchedulerService } from './services/audit-archival-scheduler.service';
 import { AuditAnalyticsService } from './services/audit-analytics.service';
 import { AuditMonitorService } from './services/audit-monitor.service';
+import { FileStorageService } from './services/file-storage.service';
 import { AuditWriteProcessor } from './processors/audit-write.processor';
 import { ArchivalProcessor } from './processors/archival.processor';
 import { ExportProcessor } from './processors/export.processor';
@@ -19,21 +20,8 @@ import { AuditLogController } from './audit-log.controller';
 import { AuditEventsGateway } from './audit-events.gateway';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { CacheModule } from '../cache/cache.module';
-
-/**
- * Queue name for audit write operations
- */
-export const AUDIT_WRITE_QUEUE = 'audit-write';
-
-/**
- * Queue name for archival operations
- */
-export const ARCHIVAL_QUEUE = 'audit-archival';
-
-/**
- * Queue name for export operations
- */
-export const EXPORT_QUEUE = 'audit-export';
+import { AuthModule } from '../auth/auth.module';
+import { ARCHIVAL_QUEUE, AUDIT_WRITE_QUEUE, EXPORT_QUEUE } from './audit.constants';
 
 /**
  * AuditModule provides comprehensive audit logging functionality.
@@ -50,6 +38,7 @@ export const EXPORT_QUEUE = 'audit-export';
   imports: [
     PrismaModule,
     CacheModule,
+    forwardRef(() => AuthModule),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     JwtModule.register({
@@ -102,6 +91,11 @@ export const EXPORT_QUEUE = 'audit-export';
     AuditArchivalSchedulerService,
     AuditAnalyticsService,
     AuditMonitorService,
+    FileStorageService,
+    {
+      provide: 'FileStorageService',
+      useExisting: FileStorageService,
+    },
     AuditLogInterceptor,
     AuditWriteProcessor,
     ArchivalProcessor,

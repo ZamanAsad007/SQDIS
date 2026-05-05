@@ -83,4 +83,25 @@ This is an automated message, please do not reply to this email.
     `.trim();
   }
 
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(to: string, resetUrl: string, userName: string): Promise<void> {
+    const mailOptions = {
+      from: this.configService.get<string>('SMTP_FROM', '"SQDIS" <noreply@sqdis.com>'),
+      to,
+      subject: 'Password Reset Request',
+      html: this.getPasswordResetTemplate(resetUrl, userName),
+      text: this.getPasswordResetTextTemplate(resetUrl, userName),
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.debug(`Password reset email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(`Failed to send password reset email to ${to}`, error);
+      throw error;
+    }
+  }
+
 }

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { ARCHIVAL_QUEUE } from '../audit.module';
+import { ARCHIVAL_QUEUE } from '../audit.constants';
 
 /**
  * Service for scheduling automated audit log archival.

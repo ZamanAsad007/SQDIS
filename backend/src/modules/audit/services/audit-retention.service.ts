@@ -6,6 +6,7 @@ import { AuditLogFilters, PaginationOptions, PaginatedAuditLogs } from './enhanc
 import { AuditLog, AuditRetentionPolicy, Prisma } from '@prisma/client';
 import * as zlib from 'zlib';
 import { promisify } from 'util';
+import { ARCHIVAL_QUEUE } from '../audit.constants';
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
@@ -50,7 +51,7 @@ export class AuditRetentionService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue('archival') private readonly archivalQueue: Queue,
+    @InjectQueue(ARCHIVAL_QUEUE) private readonly archivalQueue: Queue,
   ) {}
 
   /**
@@ -107,12 +108,12 @@ export class AuditRetentionService {
       where: { organizationId },
       update: {
         defaultRetentionDays: policyInput.defaultRetentionDays,
-        actionSpecificRetention: policyInput.actionSpecificRetention as Prisma.JsonValue,
+        actionSpecificRetention: policyInput.actionSpecificRetention ? (policyInput.actionSpecificRetention as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
       create: {
         organizationId,
         defaultRetentionDays: policyInput.defaultRetentionDays,
-        actionSpecificRetention: policyInput.actionSpecificRetention as Prisma.JsonValue,
+        actionSpecificRetention: policyInput.actionSpecificRetention ? (policyInput.actionSpecificRetention as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
     });
 
@@ -369,7 +370,7 @@ export class AuditRetentionService {
             action: log.action,
             resourceType: log.resourceType,
             resourceId: log.resourceId,
-            compressedMetadata: entry.compressedData,
+            compressedMetadata: new Uint8Array(entry.compressedData),
             granted: log.granted,
             requiredRole: log.requiredRole,
             userRole: log.userRole,

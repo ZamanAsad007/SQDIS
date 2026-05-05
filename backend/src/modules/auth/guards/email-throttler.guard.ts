@@ -1,7 +1,14 @@
 /* eslint-disable */
 import { Injectable, ExecutionContext, Inject } from '@nestjs/common';
-import { ThrottlerGuard, ThrottlerException } from '@nestjs/throttler';
-import { ThrottlerRequest } from '@nestjs/throttler/dist/throttler.guard.interface';
+import {
+  InjectThrottlerOptions,
+  InjectThrottlerStorage,
+  ThrottlerGuard,
+  ThrottlerException,
+  ThrottlerLimitDetail,
+} from '@nestjs/throttler';
+import type { ThrottlerModuleOptions, ThrottlerStorage } from '@nestjs/throttler';
+import { Reflector } from '@nestjs/core';
 import { AuditLoggerService } from '../services/audit-logger.service';
 
 /**
@@ -14,10 +21,13 @@ import { AuditLoggerService } from '../services/audit-logger.service';
 @Injectable()
 export class EmailThrottlerGuard extends ThrottlerGuard {
   constructor(
+    @InjectThrottlerOptions() options: ThrottlerModuleOptions,
+    @InjectThrottlerStorage() storageService: ThrottlerStorage,
+    reflector: Reflector,
     @Inject(AuditLoggerService)
     private readonly auditLoggerService: AuditLoggerService,
   ) {
-    super();
+    super(options, storageService, reflector);
   }
 
   /**
@@ -43,11 +53,11 @@ export class EmailThrottlerGuard extends ThrottlerGuard {
    */
   protected async throwThrottlingException(
     context: ExecutionContext,
-    throttlerRequest: ThrottlerRequest,
+    throttlerLimitDetail: ThrottlerLimitDetail,
   ): Promise<void> {
     const response = context.switchToHttp().getResponse();
     const request = context.switchToHttp().getRequest();
-    const ttl = throttlerRequest.ttl;
+    const ttl = throttlerLimitDetail.ttl;
 
     // Calculate retry-after in seconds
     const retryAfter = Math.ceil(ttl / 1000);

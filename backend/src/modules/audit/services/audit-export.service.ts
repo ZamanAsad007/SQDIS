@@ -4,7 +4,7 @@ import { Queue } from 'bullmq';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ExportFormat, ExportStatus } from '@prisma/client';
 import { AuditLogFilters } from './enhanced-audit-log.service';
-import { EXPORT_QUEUE } from '../audit.module';
+import { EXPORT_QUEUE } from '../audit.constants';
 
 // Define a minimal interface for file storage to avoid circular dependencies
 export interface IFileStorageService {

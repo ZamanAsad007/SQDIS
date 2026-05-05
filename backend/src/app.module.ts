@@ -5,6 +5,7 @@ import { AppService } from './app.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
+import { BullMQConfig } from './config/bullmq.config.js';
 
 /**
  * Root Application Module
@@ -15,6 +16,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    BullMQConfig,
     AuthModule,
     OrganizationsModule,
   ],

@@ -80,7 +80,7 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Req() req: any): Promise<AuthResponse> {
     const ipAddress = this.extractIpAddress(req);
     const userAgent = req.headers['user-agent'];
-    return this.authService.login(loginDto, ipAddress, userAgent);
+    return this.authService.login(loginDto);
   }
 
   @Public()
@@ -103,7 +103,7 @@ export class AuthController {
   async logout(@Body() refreshDto: RefreshDto, @Req() req: any): Promise<{ message: string }> {
     const ipAddress = this.extractIpAddress(req);
     const userAgent = req.headers['user-agent'];
-    await this.authService.logout(refreshDto.refreshToken, ipAddress, userAgent);
+    await this.authService.logout(refreshDto.refreshToken);
     return { message: 'Logout successful' };
   }
 
@@ -160,7 +160,7 @@ export class AuthController {
       return {
         id: user.id,
         email: user.email,
-        name: user.name,
+        name: user.name || '',
         createdAt: new Date(),
       };
     }

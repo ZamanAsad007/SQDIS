@@ -35,8 +35,8 @@ export class AuthUser {
   @ApiProperty({ description: 'User display name' })
   name: string;
 
-  @ApiProperty({ description: 'User avater URL', required: false })
-  avaterUrl?: string;
+  @ApiProperty({ description: 'User avatar URL', required: false })
+  avatarUrl?: string;
 
   @ApiProperty({ description: 'Account creation timestamp' })
   createdAt: Date;
@@ -55,7 +55,7 @@ export class AuthUser {
     required: false,
     type: [UserMemberShip],
   })
-  membership?: UserMemberShip[];
+  memberships?: UserMemberShip[];
 }
 
 /**

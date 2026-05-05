@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { EXPORT_QUEUE } from '../audit.module';
+import { EXPORT_QUEUE } from '../audit.constants';
 import { AuditExportService } from '../services/audit-export.service';
 import { ExportFormat } from '@prisma/client';
 import { AuditLogFilters } from '../services/enhanced-audit-log.service';

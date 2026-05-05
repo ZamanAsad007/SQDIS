@@ -114,7 +114,7 @@ export class AuditEventsGateway
         id: client.id,
         userId: payload.sub,
         email: payload.email,
-        organizationId: payload.organizationId,
+        organizationId: payload.organizationId || '',
         role: payload.role,
         subscribedToAuditEvents: false,
       };

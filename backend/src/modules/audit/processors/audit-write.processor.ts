@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { AUDIT_WRITE_QUEUE } from '../audit.module';
+import { AUDIT_WRITE_QUEUE } from '../audit.constants';
 import { AuditSeverity, Role } from '@prisma/client';
 import { AuditMonitorService } from '../services/audit-monitor.service';
 

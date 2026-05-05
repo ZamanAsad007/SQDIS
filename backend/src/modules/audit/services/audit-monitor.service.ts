@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CacheService } from '../../cache/cache.service';
-import { AlertsService } from '../../alerts/alerts.service';
 import { AlertType, AuditSeverity, Role } from '@prisma/client';
 
 /**
@@ -42,7 +41,6 @@ export class AuditMonitorService {
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
-    private readonly alertService: AlertsService,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -283,12 +281,12 @@ export class AuditMonitorService {
   ): Promise<void> {
     try {
       // Create alert using AlertsService
-      await this.alertService.createAlert({
-        organizationId: entry.organizationId,
-        type: AlertType.ANOMALY, // Use ANOMALY type for security alerts
-        message: `Security Alert: ${type} - ${details.message}`,
-        anomalyScore: this.getAnomalyScore(type),
-      });
+      // await this.alertService.createAlert({
+      //   organizationId: entry.organizationId,
+      //   type: AlertType.ANOMALY, // Use ANOMALY type for security alerts
+      //   message: `Security Alert: ${type} - ${details.message}`,
+      //   anomalyScore: this.getAnomalyScore(type),
+      // });
 
       // Emit high-priority event for immediate notification
       this.eventEmitter.emit('audit.security_alert', {

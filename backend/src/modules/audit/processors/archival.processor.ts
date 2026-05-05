@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { ARCHIVAL_QUEUE } from '../audit.module';
+import { ARCHIVAL_QUEUE } from '../audit.constants';
 import { AuditRetentionService } from '../services/audit-retention.service';
 import { EnhancedAuditLogService } from '../services/enhanced-audit-log.service';
 
@@ -58,7 +58,7 @@ export class ArchivalProcessor extends WorkerHost {
           organizationId: job.data.organizationId || 'system',
           action: 'ARCHIVAL',
           resourceType: 'AuditLog',
-          resourceId: null,
+          resourceId: '',
           metadata: {
             totalArchived: result.totalArchived,
             archivedByAction: result.archivedByAction,
