@@ -26,8 +26,8 @@ graph TD
     subgraph Observability
         Prometheus[Prometheus Metrics] -->|Scrapes| Backend
         Prometheus -->|Scrapes| ML
-        Loki[Loki Log Aggregator] <-- Promtail[Promtail Container Logs]
-        Tempo[Tempo Tracing] <-- Backend
+        Promtail[Promtail Container Logs] --> Loki[Loki Log Aggregator]
+        Backend --> Tempo[Tempo Tracing]
         Grafana[Grafana Dashboard] --> Prometheus
         Grafana --> Loki
         Grafana --> Tempo
