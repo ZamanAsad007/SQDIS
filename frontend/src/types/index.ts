@@ -110,6 +110,7 @@ export interface Organization {
   createdAt: string;
   updatedAt: string;
   memberCount?: number;
+  role?: UserRole;
 }
 
 export interface CreateOrganizationRequest {
