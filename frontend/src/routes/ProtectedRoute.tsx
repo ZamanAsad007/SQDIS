@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { UserRole } from '@/types'
 import { useAuthStore, useOrganizationStore } from '@/stores'
 import { PageLoader } from '@/components/common/PageLoader'
+import { logAuthzFailure } from '@/rbac/errors'
 
 const roleRank: Record<UserRole, number> = {
   VIEWER: 1,
@@ -104,6 +105,13 @@ export function ProtectedRoute({
   const role = getEffectiveRole(user?.role, currentOrganization?.role)
 
   if (!hasRequiredRole(role, requiredRole, requiredRoles)) {
+    logAuthzFailure({
+      userId: user?.id,
+      userRole: role,
+      attemptedRoute: location.pathname,
+      attemptedAction: requiredRole || (requiredRoles ? requiredRoles.join(',') : 'access_route'),
+      reason: 'Role insufficient for route requirement',
+    })
     return <Navigate to={forbiddenPath} replace state={{ from: location }} />
   }
 
