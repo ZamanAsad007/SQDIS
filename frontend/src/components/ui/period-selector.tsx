@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export type TimePeriod = 'week' | 'month' | 'quarter' | 'year'
+export type TimePeriod = 'week' | 'month' | 'quarter' | 'year' | 'all'
 
 export interface PeriodSelectorProps {
   value: TimePeriod

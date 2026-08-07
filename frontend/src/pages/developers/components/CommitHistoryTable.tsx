@@ -14,7 +14,7 @@ export function CommitHistoryTable({ developerId, initialPageSize = 10 }: Commit
   const [page, setPage] = useState(1)
   const commitsQuery = useQuery({
     queryKey: ['commits', 'developer', developerId, page, initialPageSize],
-    queryFn: () => commitsService.getAll({ developerId, page, pageSize: initialPageSize }),
+    queryFn: () => commitsService.getAll({ authorId: developerId, page, pageSize: initialPageSize }),
     enabled: !!developerId,
   })
 
@@ -41,15 +41,15 @@ export function CommitHistoryTable({ developerId, initialPageSize = 10 }: Commit
       key: 'repository',
       header: 'Repository',
       render: (commit) => (
-        <span className="text-xs text-slate-500 dark:text-slate-400">{commit.repositoryName || 'N/A'}</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{commit.repository?.name || 'N/A'}</span>
       ),
     },
     {
-      key: 'additions',
+      key: 'insertions',
       header: 'Changes',
       render: (commit) => (
         <span className="text-xs font-medium">
-          <span className="text-emerald-600">+{commit.additions}</span>{' '}
+          <span className="text-emerald-600">+{commit.insertions}</span>{' '}
           <span className="text-rose-600">-{commit.deletions}</span>
         </span>
       ),
@@ -63,20 +63,18 @@ export function CommitHistoryTable({ developerId, initialPageSize = 10 }: Commit
     },
   ]
 
+  const commits = commitsQuery.data ?? []
+
   return (
     <DataTable
       columns={columns as any}
-      data={(commitsQuery.data?.items ?? []) as any}
+      data={commits as any}
       isLoading={commitsQuery.isLoading}
-      pagination={
-        commitsQuery.data
-          ? {
-              currentPage: page,
-              totalPages: commitsQuery.data.totalPages,
-              onPageChange: setPage,
-            }
-          : undefined
-      }
+      pagination={{
+        currentPage: page,
+        totalPages: Math.ceil(commits.length / initialPageSize) || 1,
+        onPageChange: setPage,
+      }}
     />
   )
 }

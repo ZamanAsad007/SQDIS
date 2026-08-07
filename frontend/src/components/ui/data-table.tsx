@@ -8,15 +8,22 @@ export interface Column<T> {
   key: string
   header: React.ReactNode
   accessor?: (row: T) => React.ReactNode
+  render?: (row: T) => React.ReactNode
   sortable?: boolean
   className?: string
   headerClassName?: string
 }
 
+export interface PaginationInfo {
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
+}
+
 export interface DataTableProps<T extends Record<string, unknown>> {
   data: T[]
   columns: Column<T>[]
-  keyExtractor: (row: T, index: number) => string
+  keyExtractor?: (row: T, index: number) => string
   isLoading?: boolean
   emptyMessage?: string
   emptyIcon?: React.ReactNode
@@ -24,6 +31,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   sortColumn?: string | null
   sortDirection?: 'asc' | 'desc' | null
   onSort?: (columnKey: string) => void
+  pagination?: PaginationInfo
   className?: string
 }
 
@@ -102,7 +110,7 @@ export function DataTable<T extends Record<string, unknown>>({
             ) : (
               data.map((row, index) => (
                 <tr
-                  key={keyExtractor(row, index)}
+                  key={keyExtractor ? keyExtractor(row, index) : String(index)}
                   onClick={() => onRowClick?.(row)}
                   className={cn(
                     'transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40',
@@ -111,9 +119,11 @@ export function DataTable<T extends Record<string, unknown>>({
                 >
                   {columns.map((col) => (
                     <td key={col.key} className={cn('px-4 py-3.5 align-middle', col.className)}>
-                      {col.accessor
-                        ? col.accessor(row)
-                        : (row[col.key] as React.ReactNode)}
+                      {col.render
+                        ? col.render(row)
+                        : col.accessor
+                          ? col.accessor(row)
+                          : (row[col.key] as React.ReactNode)}
                     </td>
                   ))}
                 </tr>

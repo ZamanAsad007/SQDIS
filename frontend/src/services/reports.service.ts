@@ -3,6 +3,7 @@ import type {
   Report,
   CreateReportRequest,
   ReportFilters,
+  ReportListResponse,
   LeaderboardQuery,
   LeaderboardEntry,
 } from '@/types';
@@ -19,8 +20,8 @@ export const reportsService = {
   /**
    * Get all reports with filters
    */
-  async getAll(filters?: ReportFilters): Promise<Report[]> {
-    const response = await api.get<Report[]>('/reports', { params: filters });
+  async getAll(filters?: ReportFilters): Promise<ReportListResponse> {
+    const response = await api.get<ReportListResponse>('/reports', { params: filters });
     return response.data;
   },
 

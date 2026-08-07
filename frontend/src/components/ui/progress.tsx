@@ -11,6 +11,7 @@ export interface ProgressProps {
   showValue?: boolean
   label?: string
   className?: string
+  indicatorClassName?: string
 }
 
 const variantClasses: Record<ProgressVariant, string> = {
@@ -35,6 +36,7 @@ export function Progress({
   showValue = false,
   label,
   className,
+  indicatorClassName,
 }: ProgressProps) {
   const percentage = Math.min(Math.max(0, (value / max) * 100), 100)
 
@@ -53,7 +55,7 @@ export function Progress({
         )}
       >
         <div
-          className={cn('h-full rounded-full transition-all duration-300', variantClasses[variant])}
+          className={cn('h-full rounded-full transition-all duration-300', variantClasses[variant], indicatorClassName)}
           style={{ width: `${percentage}%` }}
         />
       </div>

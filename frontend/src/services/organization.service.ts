@@ -50,6 +50,21 @@ export const organizationService = {
   },
 
   /**
+   * Get all invitations for the organization
+   */
+  async getInvitations(id: string): Promise<Invitation[]> {
+    const response = await api.get<Invitation[]>(`/organizations/${id}/invitations`);
+    return response.data;
+  },
+
+  /**
+   * Revoke an invitation
+   */
+  async revokeInvitation(id: string, invitationId: string): Promise<void> {
+    await api.delete(`/organizations/${id}/invitations/${invitationId}`);
+  },
+
+  /**
    * Get organization members
    */
   async getMembers(id: string): Promise<OrganizationMember[]> {

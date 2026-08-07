@@ -14,16 +14,32 @@ export const projectsService = {
    * Get all projects for the current organization
    */
   async getAll(): Promise<Project[]> {
-    const response = await api.get<Project[]>('/projects');
-    return response.data;
+    const response = await api.get<any[]>('/projects');
+    return response.data.map((project) => ({
+      ...project,
+      sqs: project.sqs ?? project.sqsScore ?? 0,
+      sqsScore: project.sqsScore ?? project.sqs ?? 0,
+      repositoryCount: project.repositoryCount ?? project._count?.repositories ?? project.repositories?.length ?? 0,
+      teamCount: project.teamCount ?? project._count?.teamAssignments ?? project.teams?.length ?? 0,
+    }));
   },
 
   /**
    * Get project by ID
    */
   async getById(id: string): Promise<Project> {
-    const response = await api.get<Project>(`/projects/${id}`);
-    return response.data;
+    const response = await api.get<any>(`/projects/${id}`);
+    const project = response.data;
+
+    return {
+      ...project,
+      repositories: (project.repositories ?? []).map((assignment: any) => assignment.repository ?? assignment),
+      teams: (project.teamAssignments ?? []).map((assignment: any) => assignment.team),
+      repositoryCount: project.repositoryCount ?? project._count?.repositories ?? project.repositories?.length ?? 0,
+      teamCount: project.teamCount ?? project._count?.teamAssignments ?? project.teamAssignments?.length ?? 0,
+      sqs: project.sqs ?? project.sqsScore ?? 0,
+      sqsScore: project.sqsScore ?? project.sqs ?? 0,
+    };
   },
 
   /**

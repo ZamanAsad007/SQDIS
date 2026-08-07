@@ -243,10 +243,14 @@ export interface Team {
   description?: string;
   leadId?: string;
   lead?: User;
-  members?: TeamMember[];
+  members?: User[];
+  projects?: Project[];
+  score?: number;
   organizationId: string;
   projectId?: string;
   project?: Project;
+  memberCount?: number;
+  projectCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -319,6 +323,10 @@ export interface Project {
   repositories?: Repository[];
   teams?: Team[];
   sprints?: Sprint[];
+  sqs?: number;
+  sqsScore?: number;
+  repositoryCount?: number;
+  teamCount?: number;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -388,6 +396,7 @@ export interface Sprint {
   committedPoints?: number;
   completedPoints?: number;
   velocity?: number;
+  commits?: Commit[];
   report?: SprintReport;
   createdAt: string;
   updatedAt: string;
@@ -546,29 +555,30 @@ export type ReleaseStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'READY' | 'REL
 export interface Release {
   id: string;
   version: string;
-  name: string;
   description?: string;
   status: ReleaseStatus;
   organizationId: string;
-  releaseDate?: string;
+  targetDate?: string;
+  shippedAt?: string;
+  isActive?: boolean;
+  readiness?: ReleaseReadiness;
   createdAt: string;
   updatedAt: string;
   sprints?: Sprint[];
+  name?: string;
 }
 
 export interface CreateReleaseRequest {
   version: string;
-  name: string;
+  targetDate: string;
   description?: string;
-  status?: ReleaseStatus;
-  releaseDate?: string;
 }
 
 export interface UpdateReleaseRequest {
-  name?: string;
+  version?: string;
   description?: string;
   status?: ReleaseStatus;
-  releaseDate?: string;
+  targetDate?: string;
 }
 
 export interface AssociateSprintRequest {
@@ -844,6 +854,14 @@ export interface ReviewDebt {
   }>;
 }
 
+export interface ReviewListResponse {
+  data: Review[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface DeveloperReviewStats {
   userId: string;
   name: string;
@@ -856,28 +874,38 @@ export interface DeveloperReviewStats {
 
 // ============== GOALS ==============
 
-export type GoalStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'AT_RISK' | 'CANCELLED';
-export type GoalType = 'OKR' | 'QUALITY' | 'PERFORMANCE' | 'PROCESS';
+export type GoalStatus = 'ACTIVE' | 'AT_RISK' | 'ACHIEVED' | 'FAILED';
+export type GoalMetricType = 'DQS' | 'COVERAGE' | 'BUG_COUNT' | 'COMMIT_COUNT' | 'REVIEW_COUNT';
+export type GoalOperator = 'GT' | 'LT' | 'EQ' | 'GTE' | 'LTE';
 
 export interface Goal {
   id: string;
-  title: string;
+  name: string;
   description?: string;
-  type: GoalType;
+  metricType?: GoalMetricType;
+  operator?: GoalOperator;
   status: GoalStatus;
   organizationId: string;
   teamId?: string;
   team?: Team;
+  projectId?: string;
+  project?: Project;
   ownerId?: string;
   owner?: User;
   targetValue?: number;
   currentValue?: number;
   startDate?: string;
   endDate?: string;
-  progress: number;
+  isPublic?: boolean;
+  progress?: {
+    percentage: number;
+    isOnTrack: boolean;
+    daysRemaining: number;
+  };
   keyResults?: KeyResult[];
   createdAt: string;
   updatedAt: string;
+  title?: string;
 }
 
 export interface KeyResult {
@@ -894,26 +922,35 @@ export interface KeyResult {
 }
 
 export interface CreateGoalRequest {
-  title: string;
+  name: string;
   description?: string;
-  type: GoalType;
-  teamId?: string;
-  ownerId?: string;
+  metricType?: GoalMetricType;
+  operator?: GoalOperator;
   targetValue?: number;
-  startDate?: string;
+  startDate: string;
   endDate?: string;
+  teamId?: string;
+  projectId?: string;
+  ownerId?: string;
+  isPublic?: boolean;
+  keyResults?: CreateKeyResultRequest[];
+  templateId?: string;
 }
 
 export interface UpdateGoalRequest {
-  title?: string;
+  name?: string;
   description?: string;
   status?: GoalStatus;
+  metricType?: GoalMetricType;
+  operator?: GoalOperator;
   teamId?: string;
+  projectId?: string;
   ownerId?: string;
   targetValue?: number;
   currentValue?: number;
   startDate?: string;
   endDate?: string;
+  isPublic?: boolean;
 }
 
 export interface CreateKeyResultRequest {
@@ -934,12 +971,15 @@ export interface UpdateKeyResultRequest {
 
 export interface GoalFilters {
   page?: number;
-  pageSize?: number;
+  limit?: number;
   status?: GoalStatus;
-  type?: GoalType;
+  metricType?: GoalMetricType;
   teamId?: string;
+  projectId?: string;
   ownerId?: string;
   search?: string;
+  isPublic?: boolean;
+  includeKeyResults?: boolean;
 }
 
 export interface GoalsDashboardData {
@@ -979,6 +1019,16 @@ export interface GoalAchievementRatePoint {
   total: number;
 }
 
+export interface GoalListResponse {
+  data: Goal[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export interface TeamGoalComparison {
   teamId: string;
   teamName: string;
@@ -1011,6 +1061,14 @@ export interface DebtItem {
   score: number;
   organizationId: string;
   createdAt: string;
+}
+
+export interface DebtListResponse {
+  data: DebtItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface DebtFilters {
@@ -1167,6 +1225,17 @@ export interface AlertThresholdConfig {
   updatedAt: string;
 }
 
+export interface AlertListResponse {
+  data: Alert[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  severityBreakdown: Record<AlertSeverity, number>;
+}
+
 export interface CreateThresholdConfigRequest {
   alertType: AlertType;
   metricType: string;
@@ -1266,6 +1335,14 @@ export interface ReportFilters {
   endDate?: string;
 }
 
+export interface ReportListResponse {
+  reports: Report[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface LeaderboardQuery {
   period?: 'week' | 'month' | 'quarter' | 'year' | 'all';
   startDate?: string;
@@ -1345,11 +1422,17 @@ export interface RecalculateRequest {
 // ============== GITHUB ==============
 
 export interface GitHubConnectionStatus {
-  connected: boolean;
+  isConnected?: boolean;
+  connected?: boolean;
   username?: string;
   avatarUrl?: string;
   scopes?: string[];
   connectedAt?: string;
+  enabledRepositoriesCount?: number;
+  webhookStatus?: 'HEALTHY' | 'DEGRADED' | 'FAILED' | string;
+  accountName?: string;
+  organization?: string;
+  lastSyncAt?: string;
 }
 
 export interface GitHubConnection {
@@ -1369,11 +1452,16 @@ export interface Repository {
   description?: string;
   url: string;
   private: boolean;
+  isPrivate?: boolean;
   isEnabled: boolean;
+  isActive?: boolean;
   organizationId: string;
   defaultBranch: string;
   language?: string;
   lastSyncAt?: string;
+  lastSyncedAt?: string;
+  commitCount?: number;
+  sqsScore?: number;
   createdAt: string;
 }
 

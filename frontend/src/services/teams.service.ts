@@ -14,16 +14,30 @@ export const teamsService = {
    * Get all teams for the current organization
    */
   async getAll(): Promise<Team[]> {
-    const response = await api.get<Team[]>('/teams');
-    return response.data;
+    const response = await api.get<any[]>('/teams');
+    return response.data.map((team) => ({
+      ...team,
+      score: team.avgDqs ?? team.score,
+      members: (team.memberships ?? []).map((membership: any) => membership.user),
+      memberCount: team.memberCount ?? team._count?.memberships ?? team.memberships?.length ?? 0,
+      projectCount: team.projectCount ?? team._count?.projectAssignments ?? 0,
+    }));
   },
 
   /**
    * Get team by ID
    */
   async getById(id: string): Promise<Team> {
-    const response = await api.get<Team>(`/teams/${id}`);
-    return response.data;
+    const response = await api.get<any>(`/teams/${id}`);
+    const team = response.data;
+
+    return {
+      ...team,
+      members: (team.memberships ?? []).map((membership: any) => membership.user),
+      projects: (team.projectAssignments ?? []).map((assignment: any) => assignment.project),
+      memberCount: team.memberCount ?? team._count?.memberships ?? team.memberships?.length ?? 0,
+      projectCount: team.projectCount ?? team._count?.projectAssignments ?? team.projectAssignments?.length ?? 0,
+    };
   },
 
   /**

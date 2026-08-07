@@ -11,6 +11,30 @@ export const repositoriesService = {
   },
 
   /**
+   * Update repository tracking settings
+   */
+  async update(id: string, data: { isActive?: boolean; defaultBranch?: string }): Promise<Repository> {
+    const response = await api.patch<Repository>(`/github/repositories/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Sync a single repository
+   */
+  async sync(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<{ success: boolean; message: string }>(`/github/repositories/${id}/sync`);
+    return response.data;
+  },
+
+  /**
+   * Sync all active repositories
+   */
+  async syncAll(): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<{ success: boolean; message: string }>('/github/repositories/sync-all');
+    return response.data;
+  },
+
+  /**
    * Enable repository tracking
    */
   async enable(id: string, data: { defaultBranch?: string; webhookSecret?: string; autoBackfill?: boolean }): Promise<Repository> {

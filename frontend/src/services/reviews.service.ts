@@ -2,6 +2,7 @@ import { api } from './api';
 import type {
   Review,
   ReviewFilters,
+  ReviewListResponse,
   ReviewLeaderboardEntry,
   ReviewAnalytics,
   ReviewQualityMetrics,
@@ -15,8 +16,8 @@ export const reviewsService = {
   /**
    * List pull request reviews with pagination and filters
    */
-  async getAll(filters?: ReviewFilters): Promise<Review[]> {
-    const response = await api.get<Review[]>('/reviews', { params: filters });
+  async getAll(filters?: ReviewFilters): Promise<ReviewListResponse> {
+    const response = await api.get<ReviewListResponse>('/reviews', { params: filters });
     return response.data;
   },
 

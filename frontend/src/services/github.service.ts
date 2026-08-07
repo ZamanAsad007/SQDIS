@@ -65,6 +65,13 @@ export const githubService = {
   },
 
   /**
+   * Backward-compatible alias used by the settings page
+   */
+  async syncRepositories(): Promise<{ message: string }> {
+    return this.refreshWebhooks();
+  },
+
+  /**
    * Test webhook connectivity
    */
   async testWebhookConnectivity(repositoryId: string): Promise<{ success: boolean; message: string; repositoryName?: string }> {

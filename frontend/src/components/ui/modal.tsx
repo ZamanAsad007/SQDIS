@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
 
 export interface ModalProps {
-  isOpen: boolean
+  isOpen?: boolean
+  open?: boolean
   onClose: () => void
   title?: React.ReactNode
   description?: string
@@ -23,6 +24,7 @@ const sizeClasses = {
 
 export function Modal({
   isOpen,
+  open,
   onClose,
   title,
   description,
@@ -31,14 +33,15 @@ export function Modal({
   size = 'md',
   className,
 }: ModalProps) {
+  const isModalOpen = isOpen ?? open ?? false
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape' && isModalOpen) {
         onClose()
       }
     }
 
-    if (isOpen) {
+    if (isModalOpen) {
       document.body.style.overflow = 'hidden'
       window.addEventListener('keydown', handleKeyDown)
     }
@@ -47,9 +50,9 @@ export function Modal({
       document.body.style.overflow = 'unset'
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen, onClose])
+  }, [isModalOpen, onClose])
 
-  if (!isOpen) return null
+  if (!isModalOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">

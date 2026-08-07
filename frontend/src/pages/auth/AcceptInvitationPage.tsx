@@ -51,7 +51,7 @@ export function AcceptInvitationPage() {
         <h1 className="text-2xl font-bold text-slate-950 dark:text-white">Join Workspace</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {invitation
-            ? `You have been invited to join ${invitation.organizationName || 'an organization'} as a ${invitation.role}.`
+            ? `You have been invited to join ${invitation.organization?.name || 'an organization'} as a ${invitation.role}.`
             : 'Accept your invitation to get started.'}
         </p>
       </div>

@@ -3,6 +3,7 @@ import type {
   Goal,
   GoalFilters,
   GoalsDashboardData,
+  GoalListResponse,
   CreateGoalRequest,
   UpdateGoalRequest,
   CreateKeyResultRequest,
@@ -26,8 +27,8 @@ export const goalsService = {
   /**
    * Get all goals with filters
    */
-  async getAll(filters?: GoalFilters): Promise<Goal[]> {
-    const response = await api.get<Goal[]>('/goals', { params: filters });
+  async getAll(filters?: GoalFilters): Promise<GoalListResponse> {
+    const response = await api.get<GoalListResponse>('/goals', { params: filters });
     return response.data;
   },
 

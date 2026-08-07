@@ -11,6 +11,21 @@ export const emailAliasesService = {
   },
 
   /**
+   * Alias for add() for backward compatibility
+   */
+  async create(email: string): Promise<EmailAlias> {
+    const response = await api.post<EmailAlias>('/email-aliases', { email });
+    return response.data;
+  },
+
+  /**
+   * Alias for remove() for backward compatibility
+   */
+  async delete(id: string): Promise<void> {
+    await api.delete(`/email-aliases/${id}`);
+  },
+
+  /**
    * Get all email aliases for the current user
    */
   async getAll(): Promise<EmailAlias[]> {

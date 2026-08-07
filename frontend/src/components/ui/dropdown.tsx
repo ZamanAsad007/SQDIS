@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface DropdownProps {
-  trigger: React.ReactNode
+  trigger?: React.ReactNode
   children: React.ReactNode
   align?: 'left' | 'right'
   className?: string
@@ -26,9 +26,25 @@ export function Dropdown({ trigger, children, align = 'left', className }: Dropd
     }
   }, [isOpen])
 
+  // Support both prop-based and children-based usage:
+  // 1. <Dropdown trigger={...}>...</Dropdown>
+  // 2. <Dropdown><DropdownTrigger>...</DropdownTrigger><DropdownMenu>...</DropdownMenu></Dropdown>
+  // In children-based mode, the first child (DropdownTrigger) is the trigger,
+  // and the remaining children (DropdownMenu) are the menu content.
+  let triggerNode = trigger
+  let menuContent = children
+
+  if (!triggerNode && React.isValidElement(children)) {
+    const childArray = React.Children.toArray(children)
+    if (childArray.length > 0) {
+      triggerNode = childArray[0]
+      menuContent = childArray.slice(1)
+    }
+  }
+
   return (
     <div ref={dropdownRef} className="relative inline-block text-left">
-      <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
+      <div onClick={() => setIsOpen(!isOpen)}>{triggerNode}</div>
       {isOpen && (
         <div
           className={cn(
@@ -38,7 +54,7 @@ export function Dropdown({ trigger, children, align = 'left', className }: Dropd
           )}
           onClick={() => setIsOpen(false)}
         >
-          {children}
+          {menuContent}
         </div>
       )}
     </div>
@@ -76,4 +92,33 @@ DropdownItem.displayName = 'DropdownItem'
 
 export function DropdownDivider() {
   return <div className="my-1 h-px bg-slate-200 dark:bg-slate-800" />
+}
+
+// ============================================================
+// Compatibility aliases used by pages importing Radix-style API
+// (DropdownTrigger / DropdownMenu)
+// ============================================================
+
+export interface DropdownTriggerProps {
+  asChild?: boolean
+  children: React.ReactNode
+  className?: string
+}
+
+export function DropdownTrigger(props: DropdownTriggerProps) {
+  // asChild isn't necessary here since we render children directly
+  // which is how the existing Dropdown component works (children act as trigger)
+  return <>{props.children}</>
+}
+
+export interface DropdownMenuProps {
+  align?: 'left' | 'right' | 'end'
+  children: React.ReactNode
+  className?: string
+}
+
+export function DropdownMenu(props: DropdownMenuProps) {
+  // This is a rendering shim - the actual menu is rendered by the parent Dropdown.
+  // We render children directly since Dropdown already handles the positioning.
+  return <>{props.children}</>
 }
