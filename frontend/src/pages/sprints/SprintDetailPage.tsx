@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { sprintsService } from '@/services'
 import { queryKeys } from '@/lib/queryClient'
 import { PageHeader, QueryState } from '../pageUtils'
-import type { SprintStatus } from '@/types'
+import type { SprintStatus, Commit } from '@/types'
 import { CommitGroupBySprintCard } from '../releases/components/CommitGroupBySprintCard'
 import { CommitDetailModal } from '../releases/components/CommitDetailModal'
 import { SprintMetricsCard } from '../releases/components/SprintMetricsCard'
@@ -33,7 +33,7 @@ function downloadBlob(blob: Blob, filename: string) {
 export function SprintDetailPage() {
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
-  const [selectedCommit, setSelectedCommit] = useState<any>(null)
+  const [selectedCommit, setSelectedCommit] = useState<Commit | null>(null)
   const { toast } = useToast()
 
   const sprintQuery = useQuery({

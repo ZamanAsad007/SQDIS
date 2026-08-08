@@ -7,6 +7,7 @@ import { scoresService } from '@/services';
 import { queryKeys } from '@/lib/queryClient';
 import { PageHeader, QueryState } from '../pageUtils';
 import { useDeveloperRealtime } from '@/hooks/useDeveloperRealtime';
+import type { RiskModule } from '@/types';
 
 export function ScoresPage() {
   const { data: myScore, isLoading: isScoreLoading, error: scoreError, refetch: refetchScore } = useQuery({
@@ -110,17 +111,21 @@ export function ScoresPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {riskyModules.map((module: any, idx: number) => (
+                {riskyModules.map((module: RiskModule, idx: number) => (
                   <div key={idx} className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Layers className="h-5 w-5 text-slate-400" />
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{module.name || module.path}</p>
-                        <p className="text-xs text-slate-500">Churn rate: {module.churn || 'Medium'} | Bug density: {module.bugDensity || 'Low'}</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {module.modulePath}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Recommendation: {module.recommendation} | Risk Factors: {module.riskFactors.join(', ')}
+                        </p>
                       </div>
                     </div>
                     <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400">
-                      Risk Level: {module.riskLevel || 'HIGH'}
+                      Score: {module.riskScore}
                     </Badge>
                   </div>
                 ))}
