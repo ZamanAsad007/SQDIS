@@ -1582,6 +1582,13 @@ export interface OnboardingTemplate {
   createdAt: string;
 }
 
+export interface OnboardingVelocity {
+  avgDaysToFirstPR: number;
+  avgMilestoneCompletionDays: number;
+  completionRate: number;
+  trend: Array<{ week: string; avgDays: number }>;
+}
+
 export interface OnboardingDashboardStats {
   totalOnboardings: number;
   inProgress: number;

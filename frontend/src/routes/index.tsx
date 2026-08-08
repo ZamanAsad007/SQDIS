@@ -41,6 +41,8 @@ const OnboardingPage = lazy(() => import('@/pages/onboarding/OnboardingPage').th
 const AuditLogsPage = lazy(() => import('@/pages/audit').then((m) => ({ default: m.AuditLogsPage })))
 const AuditAnalyticsPage = lazy(() => import('@/pages/audit').then((m) => ({ default: m.AuditAnalyticsPage })))
 const RealTimeAuditMonitorPage = lazy(() => import('@/pages/audit').then((m) => ({ default: m.RealTimeAuditMonitorPage })))
+const EmailVerificationPage = lazy(() => import('@/pages/auth/EmailVerificationPage').then((m) => ({ default: m.EmailVerificationPage })))
+const ScoresPage = lazy(() => import('@/pages/scores/ScoresPage').then((m) => ({ default: m.ScoresPage })))
 
 const ForbiddenPage = lazy(() => import('@/pages/ForbiddenPage').then((m) => ({ default: m.ForbiddenPage })))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
@@ -64,6 +66,8 @@ export const routes: RouteObject[] = [
           { path: '/forgot-password', element: <ForgotPasswordPage /> },
           { path: '/reset-password', element: <ResetPasswordPage /> },
           { path: '/invitations/:token', element: <AcceptInvitationPage /> },
+          { path: '/verify-email/:token', element: <EmailVerificationPage /> },
+          { path: '/email-aliases/verify/:token', element: <EmailVerificationPage /> },
         ],
       },
       { path: '/auth/callback', element: <OAuthCallbackPage /> },
@@ -81,6 +85,7 @@ export const routes: RouteObject[] = [
         element: <MainLayout />,
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/scores', element: <ScoresPage /> },
           { path: '/teams', element: <TeamsPage /> },
           { path: '/teams/:id', element: <TeamDetailPage /> },
           { path: '/projects', element: <ProjectsPage /> },

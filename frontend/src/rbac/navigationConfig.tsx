@@ -11,6 +11,7 @@ export interface NavItemConfig {
 
 export const NAV_CONFIG: NavItemConfig[] = [
   { label: 'Dashboard', path: '/dashboard' },
+  { label: 'Quality Scores', path: '/scores' },
   { label: 'Developers', path: '/developers' },
   { label: 'Leaderboard', path: '/leaderboard' },
   { label: 'Commits', path: '/commits' },

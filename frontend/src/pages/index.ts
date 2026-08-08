@@ -5,6 +5,7 @@ export { AcceptInvitationPage } from './auth/AcceptInvitationPage'
 export { ForgotPasswordPage } from './auth/ForgotPasswordPage'
 export { ResetPasswordPage } from './auth/ResetPasswordPage'
 export { OAuthCallbackPage } from './auth/OAuthCallbackPage'
+export { EmailVerificationPage } from './auth/EmailVerificationPage'
 
 // Setup
 export { OrganizationSetupPage } from './setup/OrganizationSetupPage'
