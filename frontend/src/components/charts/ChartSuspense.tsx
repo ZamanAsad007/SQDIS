@@ -1,27 +1,24 @@
-import type { ReactNode } from 'react'
-import { Suspense } from 'react'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { Suspense, type ReactNode } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 
 interface ChartSuspenseProps {
-  children: ReactNode
-  className?: string
-  height?: number | string
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
-export function ChartSuspense({ children, className, height = 300 }: ChartSuspenseProps) {
+export function ChartSuspense({ children, fallback }: ChartSuspenseProps) {
   return (
     <Suspense
       fallback={
-        <div
-          className={cn('flex w-full items-center justify-center rounded-lg', className)}
-          style={{ height }}
-        >
-          <Skeleton className="h-full w-full rounded-lg" />
-        </div>
+        fallback || (
+          <div className="h-64 flex items-center justify-center bg-slate-900/50 rounded-xl border border-slate-800">
+            <Spinner />
+          </div>
+        )
       }
     >
       {children}
     </Suspense>
-  )
+  );
 }
+
