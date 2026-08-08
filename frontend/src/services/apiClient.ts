@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { ApiError } from '../types/api.types';
 
@@ -89,7 +89,11 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.response.use(
     (response) => response,
     async (error: AxiosError<ApiError>) => {
-      const originalRequest = (error.config || {}) as any;
+      const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+
+      if (!originalRequest) {
+        return Promise.reject(error);
+      }
 
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
