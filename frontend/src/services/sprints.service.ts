@@ -181,6 +181,36 @@ export const sprintsService = {
   async deleteCarryOver(carryOverId: string): Promise<void> {
     await api.delete(`/sprints/carry-overs/${carryOverId}`);
   },
+
+  /**
+   * Trigger automatic end-of-sprint report generation for all active sprints
+   */
+  async autoGenerate(): Promise<{ message: string; count: number }> {
+    const response = await api.post<{ message: string; count: number }>(
+      '/sprints/auto-generate'
+    );
+    return response.data;
+  },
+
+  /**
+   * Download sprint report as PDF (binary blob)
+   */
+  async exportPdf(id: string): Promise<Blob> {
+    const response = await api.get(`/sprints/${id}/export/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
+   * Download sprint report as CSV (binary blob)
+   */
+  async exportCsv(id: string): Promise<Blob> {
+    const response = await api.get(`/sprints/${id}/export/csv`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
 
 export default sprintsService;

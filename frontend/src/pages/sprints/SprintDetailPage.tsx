@@ -3,9 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   ArrowLeft, CheckCircle2, PlayCircle, Clock, 
-  GitCommit, Users, FileText, AlertTriangle, Activity, LayoutDashboard
+  GitCommit, Users, FileText, AlertTriangle, Activity, LayoutDashboard,
+  Download, ChevronDown, Zap
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Dropdown, DropdownItem } from '@/components/ui/dropdown'
+import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -18,10 +21,20 @@ import { CommitGroupBySprintCard } from '../releases/components/CommitGroupBySpr
 import { CommitDetailModal } from '../releases/components/CommitDetailModal'
 import { SprintMetricsCard } from '../releases/components/SprintMetricsCard'
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function SprintDetailPage() {
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
   const [selectedCommit, setSelectedCommit] = useState<any>(null)
+  const { toast } = useToast()
 
   const sprintQuery = useQuery({
     queryKey: queryKeys.sprints.detail(id ?? ''),
@@ -39,6 +52,36 @@ export function SprintDetailPage() {
     mutationFn: (status: SprintStatus) => sprintsService.update(id!, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sprints.detail(id!) })
+    },
+  })
+
+  const autoGenerateMutation = useMutation({
+    mutationFn: () => sprintsService.autoGenerate(),
+    onSuccess: (result) => {
+      toast(result.message ?? `${result.count} sprint report(s) generated.`, { type: 'success' })
+    },
+    onError: () => {
+      toast('Could not trigger report generation. Please try again.', { type: 'error' })
+    },
+  })
+
+  const exportPdfMutation = useMutation({
+    mutationFn: () => sprintsService.exportPdf(id!),
+    onSuccess: (blob) => {
+      downloadBlob(blob, `sprint-${id}-report.pdf`)
+    },
+    onError: () => {
+      toast('Could not export PDF. Please try again.', { type: 'error' })
+    },
+  })
+
+  const exportCsvMutation = useMutation({
+    mutationFn: () => sprintsService.exportCsv(id!),
+    onSuccess: (blob) => {
+      downloadBlob(blob, `sprint-${id}-report.csv`)
+    },
+    onError: () => {
+      toast('Could not export CSV. Please try again.', { type: 'error' })
     },
   })
 
@@ -109,6 +152,41 @@ export function SprintDetailPage() {
                       <CheckCircle2 className="h-4 w-4" /> Complete Sprint
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => autoGenerateMutation.mutate()}
+                    isLoading={autoGenerateMutation.isPending}
+                  >
+                    <Zap className="h-4 w-4" /> Auto-Generate
+                  </Button>
+                  <Dropdown
+                    align="right"
+                    trigger={
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        isLoading={exportPdfMutation.isPending || exportCsvMutation.isPending}
+                      >
+                        <Download className="h-4 w-4" /> Export <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                      </Button>
+                    }
+                  >
+                    <DropdownItem
+                      icon={<FileText className="h-4 w-4" />}
+                      onClick={() => exportPdfMutation.mutate()}
+                      disabled={exportPdfMutation.isPending}
+                    >
+                      Download PDF
+                    </DropdownItem>
+                    <DropdownItem
+                      icon={<Download className="h-4 w-4" />}
+                      onClick={() => exportCsvMutation.mutate()}
+                      disabled={exportCsvMutation.isPending}
+                    >
+                      Download CSV
+                    </DropdownItem>
+                  </Dropdown>
                   <Button variant="outline" className="gap-2">
                     <FileText className="h-4 w-4" /> Edit Details
                   </Button>
