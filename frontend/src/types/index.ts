@@ -1003,6 +1003,22 @@ export interface GoalTemplate {
   createdAt: string;
 }
 
+export interface GoalAchievement {
+  id: string;
+  goalId: string;
+  goalTitle: string;
+  achievedAt: string;
+  finalProgress: number;
+}
+
+export interface GoalSnapshot {
+  id: string;
+  goalId: string;
+  progress: number;
+  currentValue?: number;
+  snapshotAt: string;
+}
+
 export interface GoalHistoryEntry {
   id: string;
   goalId: string;
