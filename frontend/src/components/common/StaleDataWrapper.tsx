@@ -1,38 +1,21 @@
-import React from 'react'
-import { StaleDataIndicator } from './StaleDataIndicator'
-import { cn } from '@/lib/utils'
+import React from 'react';
+import { StaleDataIndicator } from './StaleDataIndicator';
 
-export interface StaleDataWrapperProps {
-  children: React.ReactNode
-  isStale?: boolean
-  lastUpdated?: string | Date | number | null
-  onRefresh?: () => void
-  isRefreshing?: boolean
-  className?: string
+interface StaleDataWrapperProps {
+  isStale: boolean;
+  onRefresh?: () => void;
+  children: React.ReactNode;
 }
 
-export function StaleDataWrapper({
-  children,
-  isStale = false,
-  lastUpdated,
-  onRefresh,
-  isRefreshing = false,
-  className,
-}: StaleDataWrapperProps) {
+export function StaleDataWrapper({ isStale, onRefresh, children }: StaleDataWrapperProps) {
   return (
-    <div className={cn('relative w-full', className)}>
+    <div className="relative space-y-2">
       {isStale && (
-        <div className="mb-3">
-          <StaleDataIndicator
-            isStale={isStale}
-            lastUpdated={lastUpdated}
-            onRefresh={onRefresh}
-            isRefreshing={isRefreshing}
-            variant="banner"
-          />
+        <div className="flex justify-end">
+          <StaleDataIndicator isStale={isStale} onRefresh={onRefresh} />
         </div>
       )}
       {children}
     </div>
-  )
+  );
 }
