@@ -38,6 +38,9 @@ const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then((m)
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })))
 const OrganizationSetupPage = lazy(() => import('@/pages/setup/OrganizationSetupPage').then((m) => ({ default: m.OrganizationSetupPage })))
 const OnboardingPage = lazy(() => import('@/pages/onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })))
+const AuditLogsPage = lazy(() => import('@/pages/audit').then((m) => ({ default: m.AuditLogsPage })))
+const AuditAnalyticsPage = lazy(() => import('@/pages/audit').then((m) => ({ default: m.AuditAnalyticsPage })))
+const RealTimeAuditMonitorPage = lazy(() => import('@/pages/audit').then((m) => ({ default: m.RealTimeAuditMonitorPage })))
 
 const ForbiddenPage = lazy(() => import('@/pages/ForbiddenPage').then((m) => ({ default: m.ForbiddenPage })))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
@@ -109,6 +112,9 @@ export const routes: RouteObject[] = [
           { path: '/developers/:id', element: <DeveloperProfilePage /> },
           { path: '/leaderboard', element: <LeaderboardPage /> },
           { path: '/onboarding', element: <OnboardingPage /> },
+          { path: '/audit-logs', element: <AuditLogsPage /> },
+          { path: '/audit-logs/analytics', element: <AuditAnalyticsPage /> },
+          { path: '/audit-logs/monitor', element: <RealTimeAuditMonitorPage /> },
         ],
       },
     ],
