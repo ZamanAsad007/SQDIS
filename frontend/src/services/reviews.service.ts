@@ -110,6 +110,17 @@ export const reviewsService = {
     const response = await api.get<Review>(`/reviews/${id}`);
     return response.data;
   },
+
+  /**
+   * Export reviews list to CSV (binary blob)
+   */
+  async exportCsv(filters?: Record<string, unknown>): Promise<Blob> {
+    const response = await api.get('/reviews/export', {
+      params: filters,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
 
 export default reviewsService;

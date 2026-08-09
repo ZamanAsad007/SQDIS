@@ -5,6 +5,7 @@ import type {
   CreateOnboardingRequest,
   ExtendOnboardingRequest,
   OnboardingTemplate,
+  OnboardingVelocity,
   OnboardingDashboardStats,
   MentorCapacity,
 } from '@/types';
@@ -151,6 +152,48 @@ export const onboardingService = {
       `/onboarding/${userId}/timeline`
     );
     return response.data;
+  },
+
+  /**
+   * Get org-wide milestone velocity (time-to-first-PR, completion rates)
+   */
+  async getVelocity(filters?: Record<string, unknown>): Promise<OnboardingVelocity> {
+    const response = await api.get<OnboardingVelocity>('/onboarding/velocity', { params: filters });
+    return response.data;
+  },
+
+  /**
+   * Get velocity breakdown for a specific developer
+   */
+  async getDeveloperVelocity(userId: string): Promise<OnboardingVelocity> {
+    const response = await api.get<OnboardingVelocity>(`/onboarding/velocity/${userId}`);
+    return response.data;
+  },
+
+  /**
+   * Get a single onboarding template by ID
+   */
+  async getTemplate(id: string): Promise<OnboardingTemplate> {
+    const response = await api.get<OnboardingTemplate>(`/onboarding/templates/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Update an onboarding template
+   */
+  async updateTemplate(
+    id: string,
+    data: Partial<{ name: string; description?: string; items: Array<{ title: string; description?: string }> }>
+  ): Promise<OnboardingTemplate> {
+    const response = await api.patch<OnboardingTemplate>(`/onboarding/templates/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete an onboarding template
+   */
+  async deleteTemplate(id: string): Promise<void> {
+    await api.delete(`/onboarding/templates/${id}`);
   },
 };
 

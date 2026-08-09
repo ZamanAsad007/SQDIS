@@ -106,6 +106,8 @@ export const queryKeys = {
     achievementRate: (query?: Record<string, unknown>) => ['goals', 'achievement-rate', query] as const,
     teamComparison: (query?: Record<string, unknown>) => ['goals', 'team-comparison', query] as const,
     reportHistory: (query?: Record<string, unknown>) => ['goals', 'report-history', query] as const,
+    reportsHistory: (filters?: Record<string, unknown>) => ['goals', 'reports-history', filters] as const,
+    templateDetail: (id: string) => ['goals', 'templates', id] as const,
   },
   commits: {
     all: (filters?: Record<string, unknown>) => ['commits', 'all', filters] as const,

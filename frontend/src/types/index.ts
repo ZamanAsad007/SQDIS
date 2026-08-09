@@ -1003,6 +1003,22 @@ export interface GoalTemplate {
   createdAt: string;
 }
 
+export interface GoalAchievement {
+  id: string;
+  goalId: string;
+  goalTitle: string;
+  achievedAt: string;
+  finalProgress: number;
+}
+
+export interface GoalSnapshot {
+  id: string;
+  goalId: string;
+  progress: number;
+  currentValue?: number;
+  snapshotAt: string;
+}
+
 export interface GoalHistoryEntry {
   id: string;
   goalId: string;
@@ -1564,6 +1580,13 @@ export interface OnboardingTemplate {
     order: number;
   }>;
   createdAt: string;
+}
+
+export interface OnboardingVelocity {
+  avgDaysToFirstPR: number;
+  avgMilestoneCompletionDays: number;
+  completionRate: number;
+  trend: Array<{ week: string; avgDays: number }>;
 }
 
 export interface OnboardingDashboardStats {

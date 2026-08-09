@@ -18,6 +18,22 @@ export const reportsService = {
   },
 
   /**
+   * Trigger typed PDF report generation
+   */
+  async createPdf(data: CreateReportRequest): Promise<Report> {
+    const response = await api.post<Report>('/reports/pdf', data);
+    return response.data;
+  },
+
+  /**
+   * Trigger typed CSV report generation
+   */
+  async createCsv(data: CreateReportRequest): Promise<Report> {
+    const response = await api.post<Report>('/reports/csv', data);
+    return response.data;
+  },
+
+  /**
    * Get all reports with filters
    */
   async getAll(filters?: ReportFilters): Promise<ReportListResponse> {

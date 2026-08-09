@@ -81,6 +81,58 @@ export const githubService = {
     );
     return response.data;
   },
+
+  /**
+   * Retry a previously failed webhook delivery
+   */
+  async retryWebhookDelivery(deliveryId: string): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>(
+      `/github/webhooks/retry/${deliveryId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Update the sliding-window webhook rate limit
+   */
+  async updateWebhookRateLimit(data: {
+    maxRequests: number;
+    windowMs: number;
+  }): Promise<{ message: string }> {
+    const response = await api.put<{ message: string }>(
+      '/github/webhooks/rate-limit',
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Rotate the webhook secret for a specific repository
+   */
+  async updateWebhookSecret(
+    repoId: string,
+    data: { webhookSecret: string }
+  ): Promise<{ message: string }> {
+    const response = await api.put<{ message: string }>(
+      `/github/repositories/${repoId}/webhook-secret`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Toggle webhook processing on or off for a specific repository
+   */
+  async updateWebhookEnabled(
+    repoId: string,
+    data: { webhookEnabled: boolean }
+  ): Promise<{ message: string }> {
+    const response = await api.put<{ message: string }>(
+      `/github/repositories/${repoId}/webhook-enabled`,
+      data
+    );
+    return response.data;
+  },
 };
 
 export default githubService;

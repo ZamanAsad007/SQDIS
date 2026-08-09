@@ -10,6 +10,8 @@ import type {
   UpdateKeyResultRequest,
   KeyResult,
   GoalTemplate,
+  GoalAchievement,
+  GoalSnapshot,
   GoalHistoryEntry,
   GoalAchievementRatePoint,
   TeamGoalComparison,
@@ -140,6 +142,61 @@ export const goalsService = {
       params: { startDate, endDate },
     });
     return response.data;
+  },
+
+  /**
+   * Get user goal achievement log
+   */
+  async getAchievements(): Promise<GoalAchievement[]> {
+    const response = await api.get<GoalAchievement[]>('/goals/achievements');
+    return response.data;
+  },
+
+  /**
+   * Get historical progress snapshots
+   */
+  async getSnapshots(filters?: Record<string, unknown>): Promise<GoalSnapshot[]> {
+    const response = await api.get<GoalSnapshot[]>('/goals/snapshots', { params: filters });
+    return response.data;
+  },
+
+  /**
+   * Get report-formatted goal history
+   */
+  async getReportsHistory(filters?: Record<string, unknown>): Promise<GoalHistoryEntry[]> {
+    const response = await api.get<GoalHistoryEntry[]>('/goals/reports/history', { params: filters });
+    return response.data;
+  },
+
+  /**
+   * Force a snapshot of the current goal progress
+   */
+  async forceSnapshot(id: string): Promise<GoalSnapshot> {
+    const response = await api.post<GoalSnapshot>(`/goals/${id}/snapshot`);
+    return response.data;
+  },
+
+  /**
+   * Get a single goal template by ID
+   */
+  async getTemplate(id: string): Promise<GoalTemplate> {
+    const response = await api.get<GoalTemplate>(`/goals/templates/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Update a goal template
+   */
+  async updateTemplate(id: string, data: Partial<GoalTemplate>): Promise<GoalTemplate> {
+    const response = await api.patch<GoalTemplate>(`/goals/templates/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete a goal template
+   */
+  async deleteTemplate(id: string): Promise<void> {
+    await api.delete(`/goals/templates/${id}`);
   },
 };
 
