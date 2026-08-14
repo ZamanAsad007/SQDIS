@@ -25,6 +25,14 @@ class CommitInfo(BaseModel):
     files_changed: List[FileChangeInfo] = Field(..., description="List of files modified in this commit")
 
 
+class QualityGateConfig(BaseModel):
+    """Configurable quality gate thresholds."""
+    max_cognitive_complexity: int = Field(default=15, description="Maximum allowed cognitive complexity per file/function")
+    max_cyclomatic_complexity: int = Field(default=20, description="Maximum allowed cyclomatic complexity")
+    min_maintainability_index: float = Field(default=40.0, description="Minimum acceptable Maintainability Index (0-100)")
+    allow_critical_security: bool = Field(default=False, description="Whether critical security issues fail the gate")
+    allow_high_security: bool = Field(default=False, description="Whether high security issues fail the gate")
+
 
 class CodeAnalysisRequest(BaseModel):
     """Request schema for code quality analysis."""
@@ -32,6 +40,7 @@ class CodeAnalysisRequest(BaseModel):
     git_history: Optional[List[CommitInfo]] = Field(default=None, description="Optional commit history for ownership and hotspot analysis")
     coverage_metadata: Optional[Dict[str, float]] = Field(default=None, description="Optional map of file path to test coverage percentage")
     repository_id: Optional[str] = Field(default=None, description="Optional repository ID for caching and delta analysis")
+    quality_gate_config: Optional[QualityGateConfig] = Field(default=None, description="Custom quality gate configuration")
 
 
 # ==================== Response Schemas ====================
@@ -42,6 +51,7 @@ class DuplicateBlock(BaseModel):
     start_line: int
     line_count: int
     snippet: str
+    remediation_minutes: Optional[int] = Field(default=45, description="Estimated minutes to refactor and deduplicate")
 
 
 class ComplexityResult(BaseModel):
@@ -51,6 +61,7 @@ class ComplexityResult(BaseModel):
     cognitive_complexity: int = Field(..., description="Cognitive complexity rating")
     maintainability_index: float = Field(..., description="Maintainability Index (0-100)")
     duplicate_blocks: List[DuplicateBlock] = Field(default_factory=list)
+    remediation_minutes: Optional[int] = Field(default=0, description="Estimated minutes to simplify complexity")
 
 
 class SecurityIssue(BaseModel):
@@ -60,6 +71,9 @@ class SecurityIssue(BaseModel):
     severity: str = Field(..., description="LOW, MEDIUM, HIGH, CRITICAL")
     message: str = Field(..., description="Warning message describing the issue")
     line_number: Optional[int] = Field(None, description="Line number of the issue, if available")
+    rule_id: Optional[str] = Field(default=None, description="Unique SAST rule identifier")
+    remediation_advice: Optional[str] = Field(default=None, description="Actionable fix recommendations")
+    remediation_minutes: Optional[int] = Field(default=60, description="Estimated minutes to remediate vulnerability")
 
 
 class OwnershipResult(BaseModel):
@@ -75,6 +89,7 @@ class HotspotResult(BaseModel):
     path: str
     hotspot_score: float = Field(..., ge=0.0, le=100.0, description="Hotspot prioritization score (0-100)")
     reasons: List[str] = Field(..., description="Why this file was flagged as a hotspot")
+    recommended_action: Optional[str] = Field(default=None, description="Specific action to resolve hotspot")
 
 
 class CodeSmell(BaseModel):
@@ -84,12 +99,14 @@ class CodeSmell(BaseModel):
     location: str = Field(..., description="Name of class/method or line range")
     description: str
     severity: str = Field(..., description="LOW, WARNING, ERROR")
+    remediation_minutes: Optional[int] = Field(default=90, description="Estimated minutes to refactor code smell")
 
 
 class DependencyCycle(BaseModel):
     """Represents a circular dependency path detected between files."""
     files: List[str] = Field(..., description="The path of files forming a loop, e.g., ['a.py', 'b.py', 'a.py']")
     description: str
+    remediation_minutes: Optional[int] = Field(default=180, description="Estimated minutes to decouple circular dependency")
 
 
 class SemanticClone(BaseModel):
@@ -109,6 +126,7 @@ class TaintIssue(BaseModel):
     variable_name: str
     message: str
     severity: str = Field("HIGH", description="HIGH, CRITICAL")
+    remediation_minutes: Optional[int] = Field(default=120, description="Estimated minutes to sanitize taint flow")
 
 
 class JITCommitRisk(BaseModel):
@@ -128,6 +146,22 @@ class KnowledgeSiloGraph(BaseModel):
     reasons: List[str] = Field(default_factory=list)
 
 
+class QualityGateViolation(BaseModel):
+    """A rule violation that breached quality gate policy."""
+    file_path: str
+    rule: str
+    severity: str = Field(..., description="WARNING or CRITICAL")
+    message: str
+
+
+class QualityGateResult(BaseModel):
+    """Automated Quality Gate evaluation result."""
+    status: str = Field(..., description="PASSED, WARNING, or FAILED")
+    passed: bool = Field(..., description="Whether all mandatory quality rules passed")
+    total_debt_hours: float = Field(..., description="Total technical debt estimated across repository in hours")
+    violations: List[QualityGateViolation] = Field(default_factory=list)
+
+
 class CodeAnalysisResult(BaseModel):
     """Complete code quality scan results."""
     complexity: List[ComplexityResult] = Field(default_factory=list)
@@ -143,3 +177,6 @@ class CodeAnalysisResult(BaseModel):
     jit_commit_risks: List[JITCommitRisk] = Field(default_factory=list)
     knowledge_decay: List[KnowledgeSiloGraph] = Field(default_factory=list)
 
+    # Technical debt & Quality Gate
+    total_debt_hours: float = Field(default=0.0, description="Total technical debt estimated across repository in hours")
+    quality_gate: Optional[QualityGateResult] = Field(default=None, description="Quality gate evaluation status and policy violations")
