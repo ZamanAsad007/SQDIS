@@ -451,6 +451,10 @@ class CodeQualityAnalyzer:
 
     """Core analysis engine for parsing code complexity, security, duplication, ownership, and hotspots."""
 
+    def __init__(self):
+        self._content_complexity_cache: Dict[str, ComplexityResult] = {}
+        self._content_security_cache: Dict[str, List[SecurityIssue]] = {}
+
     # SAST and Secret Scanning regex rules
     SECURITY_RULES = [
         # 1. SQL Injection Risk
@@ -779,10 +783,16 @@ class CodeQualityAnalyzer:
         return duplicates_map
 
     def _scan_security(self, files: List[FileInput]) -> List[SecurityIssue]:
-        """Scan code files for security risks and secrets exposure."""
+        """Scan code files for security risks and secrets exposure with sha256 content caching."""
         issues = []
 
         for f in files:
+            content_hash = hashlib.sha256(f"{f.path}:{f.content}".encode("utf-8")).hexdigest()
+            if content_hash in self._content_security_cache:
+                issues.extend(self._content_security_cache[content_hash])
+                continue
+
+            file_issues = []
             lines = f.content.splitlines()
             for line_idx, line in enumerate(lines):
                 line_str = line.strip()
@@ -792,7 +802,7 @@ class CodeQualityAnalyzer:
 
                 for rule in self.SECURITY_RULES:
                     if re.search(rule["pattern"], line, re.IGNORECASE if rule["type"] == "sast" else 0):
-                        issues.append(SecurityIssue(
+                        file_issues.append(SecurityIssue(
                             path=f.path,
                             type=rule["type"],
                             severity=rule["severity"],
@@ -802,6 +812,9 @@ class CodeQualityAnalyzer:
                             remediation_advice=rule.get("remediation_advice"),
                             remediation_minutes=rule.get("remediation_minutes", 60)
                         ))
+
+            self._content_security_cache[content_hash] = file_issues
+            issues.extend(file_issues)
 
         return issues
 
@@ -1568,15 +1581,21 @@ class CodeQualityAnalyzer:
             
         logger.info(f"Starting code quality scan for {len(files_to_scan)} files...")
 
-        # 1. Complexity & Code metrics
+        # 1. Complexity & Code metrics with sha256 content caching
         complexity_results = []
         for f in files_to_scan:
-            if f.path.endswith(".py"):
-                comp = self._calculate_python_complexity(f.content, f.path)
-            elif f.path.endswith((".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")):
-                comp = self._calculate_javascript_typescript_complexity(f.content, f.path)
+            content_hash = hashlib.sha256(f"{f.path}:{f.content}".encode("utf-8")).hexdigest()
+            if content_hash in self._content_complexity_cache:
+                comp = self._content_complexity_cache[content_hash].model_copy()
             else:
-                comp = self._calculate_lexical_complexity(f.content, f.path)
+                if f.path.endswith(".py"):
+                    comp = self._calculate_python_complexity(f.content, f.path)
+                elif f.path.endswith((".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")):
+                    comp = self._calculate_javascript_typescript_complexity(f.content, f.path)
+                else:
+                    comp = self._calculate_lexical_complexity(f.content, f.path)
+                self._content_complexity_cache[content_hash] = comp
+
             complexity_results.append(comp)
 
         # 2. Scanning duplication
