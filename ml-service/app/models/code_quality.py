@@ -17,7 +17,8 @@ from app.schemas.code_quality import (
     CodeAnalysisRequest, CodeAnalysisResult, ComplexityResult,
     DuplicateBlock, SecurityIssue, OwnershipResult, HotspotResult,
     CodeSmell, DependencyCycle, SemanticClone, TaintIssue,
-    JITCommitRisk, KnowledgeSiloGraph, FileInput, CommitInfo
+    JITCommitRisk, KnowledgeSiloGraph, FileInput, CommitInfo,
+    QualityGateConfig, QualityGateViolation, QualityGateResult
 )
 
 
@@ -450,6 +451,10 @@ class CodeQualityAnalyzer:
 
     """Core analysis engine for parsing code complexity, security, duplication, ownership, and hotspots."""
 
+    def __init__(self):
+        self._content_complexity_cache: Dict[str, ComplexityResult] = {}
+        self._content_security_cache: Dict[str, List[SecurityIssue]] = {}
+
     # SAST and Secret Scanning regex rules
     SECURITY_RULES = [
         # 1. SQL Injection Risk
@@ -458,55 +463,99 @@ class CodeQualityAnalyzer:
             "type": "sast",
             "severity": "HIGH",
             "pattern": r"(execute|query|select|db_query)\s*\(.*([%+].*|f\".*\{.*\}.*\")",
-            "message": "Potential SQL injection vulnerability: raw string formatting detected inside database execute command."
+            "message": "Potential SQL injection vulnerability: raw string formatting detected inside database execute command.",
+            "remediation_advice": "Use parameterized queries or ORM query builders with typed parameter bindings.",
+            "remediation_minutes": 60
         },
         # 2. Dangerous Executions
         {
             "id": "eval-exec",
             "type": "sast",
             "severity": "CRITICAL",
-            "pattern": r"\b(eval|exec|subprocess\.Popen|subprocess\.run)\s*\(.*(shell\s*=\s*True|compile|\bsh\b|\bbash\b)",
-            "message": "Potential Remote Code Execution (RCE) risk: shell evaluation or dynamic command execution detected."
+            "pattern": r"\b(eval|exec|subprocess\.Popen|subprocess\.run)\s*\(.*(shell\s*[:=]\s*(true|True)|compile|\bsh\b|\bbash\b)",
+            "message": "Potential Remote Code Execution (RCE) risk: shell evaluation or dynamic command execution detected.",
+            "remediation_advice": "Avoid dynamic code execution. Pass arguments as arrays without shell=True.",
+            "remediation_minutes": 120
         },
-        # 3. Weak Cryptography
+        # 3. Path Traversal
+        {
+            "id": "path-traversal",
+            "type": "sast",
+            "severity": "HIGH",
+            "pattern": r"(\.\./\.\./|\.\.\\\.\.\\|os\.path\.join\s*\(.*(request|req|params|query)|path\.join\s*\(.*(req\.|request\.))",
+            "message": "Potential Path Traversal vulnerability: unvalidated relative path resolution.",
+            "remediation_advice": "Validate paths using path.resolve() and verify they remain within allowed root directories.",
+            "remediation_minutes": 60
+        },
+        # 4. Cross-Site Scripting (XSS)
+        {
+            "id": "xss-injection",
+            "type": "sast",
+            "severity": "HIGH",
+            "pattern": r"(dangerouslySetInnerHTML|innerHTML\s*=|document\.write\s*\()",
+            "message": "Potential Cross-Site Scripting (XSS): raw HTML injection detected.",
+            "remediation_advice": "Use safe DOM text bindings or sanitize markup with DOMPurify.",
+            "remediation_minutes": 45
+        },
+        # 5. Insecure Deserialization
+        {
+            "id": "insecure-deserialization",
+            "type": "sast",
+            "severity": "CRITICAL",
+            "pattern": r"\b(pickle\.loads?|yaml\.unsafe_load|yaml\.load\s*\(.*Loader\s*=\s*(None|Loader|UnsafeLoader))",
+            "message": "Insecure Deserialization risk: untrusted data deserialization can lead to arbitrary code execution.",
+            "remediation_advice": "Use safe formats like JSON or yaml.safe_load(). Avoid loading untrusted pickle streams.",
+            "remediation_minutes": 90
+        },
+        # 6. Weak Cryptography
         {
             "id": "weak-crypto",
             "type": "sast",
             "severity": "MEDIUM",
-            "pattern": r"\b(hashlib\.md5|hashlib\.sha1|MD5|SHA1)\b",
-            "message": "Insecure cryptographic hashing algorithm (MD5/SHA-1) detected. Use SHA-256 or bcrypt instead."
+            "pattern": r"\b(hashlib\.md5|hashlib\.sha1|MD5|SHA1|crypto\.createHash\s*\(\s*['\"](md5|sha1)['\"]\))\b",
+            "message": "Insecure cryptographic hashing algorithm (MD5/SHA-1) detected. Use SHA-256 or bcrypt instead.",
+            "remediation_advice": "Upgrade to secure hashing algorithms such as SHA-256, SHA-512, or bcrypt/argon2.",
+            "remediation_minutes": 30
         },
-        # 4. Insecure Host Binding
+        # 7. Insecure Host Binding
         {
             "id": "insecure-binding",
             "type": "sast",
             "severity": "MEDIUM",
             "pattern": r"['\"]0\.0\.0\.0['\"]",
-            "message": "Insecure network binding: server binds to all available network interfaces ('0.0.0.0')."
+            "message": "Insecure network binding: server binds to all available network interfaces ('0.0.0.0').",
+            "remediation_advice": "Bind server processes strictly to '127.0.0.1' or configurable host environment variables.",
+            "remediation_minutes": 15
         },
-        # 5. Secrets: Private Key Leaks
+        # 8. Secrets: Private Key Leaks
         {
             "id": "private-key",
             "type": "secret",
             "severity": "CRITICAL",
             "pattern": r"-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----",
-            "message": "Private key leakage detected. Never commit cryptographic private keys to git repositories."
+            "message": "Private key leakage detected. Never commit cryptographic private keys to git repositories.",
+            "remediation_advice": "Revoke the exposed key immediately and inject credentials via environment secrets manager.",
+            "remediation_minutes": 60
         },
-        # 6. Secrets: Slack incoming webhooks
+        # 9. Secrets: Slack incoming webhooks
         {
             "id": "slack-webhook",
             "type": "secret",
             "severity": "CRITICAL",
             "pattern": r"https://hooks\.slack\.com/services/T[A-Z0-9_]{8}/B[A-Z0-9_]{8}/[A-Za-z0-9_]{24}",
-            "message": "Slack Incoming Webhook URL exposed."
+            "message": "Slack Incoming Webhook URL exposed.",
+            "remediation_advice": "Revoke the exposed webhook URL and store it securely in environment variables.",
+            "remediation_minutes": 30
         },
-        # 7. Secrets: Generic AWS/OAuth Token Patterns
+        # 10. Secrets: Generic AWS/OAuth Token Patterns
         {
             "id": "generic-token",
             "type": "secret",
             "severity": "CRITICAL",
             "pattern": r"\b(aws_access_key_id|aws_secret_access_key|api_key|secret_key|jwt_secret|oauth_token)\b\s*=\s*['\"][A-Za-z0-9+/=_\-\.]{16,}['\"]",
-            "message": "Hardcoded credential/API token detected."
+            "message": "Hardcoded credential/API token detected.",
+            "remediation_advice": "Rotate the exposed secret and load credentials via ConfigService or environment variables.",
+            "remediation_minutes": 45
         }
     ]
 
@@ -544,19 +593,104 @@ class CodeQualityAnalyzer:
             # Normalize to 0-100
             mi = max(0.0, min(100.0, mi))
 
+            remediation_minutes = 0
+            if mi < 50.0 or cc > 15 or cog > 15:
+                remediation_minutes = int(max(0, cc - 10) * 10 + max(0, cog - 10) * 10 + max(0.0, 60.0 - mi) * 2)
+
             return ComplexityResult(
                 path=path,
                 cyclomatic_complexity=cc,
                 cognitive_complexity=cog,
                 maintainability_index=round(mi, 2),
-                duplicate_blocks=[]
+                duplicate_blocks=[],
+                remediation_minutes=remediation_minutes
             )
         except Exception as e:
             logger.warning(f"AST parsing failed for {path}: {e}. Falling back to lexical scan.")
             return self._calculate_lexical_complexity(content, path)
 
+    def _calculate_javascript_typescript_complexity(self, content: str, path: str) -> ComplexityResult:
+        """Deep lexical/AST complexity parser for JavaScript and TypeScript source files."""
+        # Strip comments
+        clean_lines = []
+        in_multiline = False
+        for line in content.splitlines():
+            line_str = line.strip()
+            if in_multiline:
+                if "*/" in line_str:
+                    in_multiline = False
+                    line_str = line_str.split("*/", 1)[1].strip()
+                else:
+                    continue
+            if "/*" in line_str:
+                if "*/" in line_str:
+                    line_str = re.sub(r"/\*.*?\*/", "", line_str).strip()
+                else:
+                    in_multiline = True
+                    line_str = line_str.split("/*", 1)[0].strip()
+            if "//" in line_str:
+                line_str = line_str.split("//", 1)[0].strip()
+            if line_str:
+                clean_lines.append(line_str)
+
+        loc = max(1, len(clean_lines))
+
+        # 1. Cyclomatic Complexity
+        # Branch points: if, else if, for, while, do, switch/case, catch, &&, ||, ??, ternary ? :
+        cc = 1
+        for line in clean_lines:
+            # Control flow keywords
+            cc += len(re.findall(r"\b(if|for|while|catch|case)\b", line))
+            # Logical binary operators
+            cc += len(re.findall(r"(&&|\|\||\?\?)", line))
+            # Ternary conditional operator (exclude TypeScript type definitions with ?: or ?.)
+            if "?" in line and ":" in line and not re.search(r"(\?:|\?\.)", line):
+                cc += 1
+
+        # 2. Cognitive Complexity with Block Nesting Depth
+        cog = 0
+        nesting = 0
+        for line in clean_lines:
+            # Track block entrance/exit
+            open_braces = line.count("{")
+            close_braces = line.count("}")
+
+            # If control statement exists, add 1 + current nesting
+            if re.search(r"\b(if|for|while|catch|switch)\b", line):
+                cog += 1 + nesting
+            elif re.search(r"(&&|\|\||\?\?)", line):
+                cog += 1  # Incremental cognitive load for compound condition
+
+            nesting += open_braces - close_braces
+            nesting = max(0, nesting)
+
+        # 3. Halstead Volume Approximation
+        tokens = re.findall(r"[A-Za-z_$][A-Za-z0-9_$]*|[+\-*/%=!<>]=?|&&|\|\||\?\?", content)
+        unique_tokens = set(tokens)
+        vocab = max(1, len(unique_tokens))
+        length = max(1, len(tokens))
+        volume = length * math.log2(vocab)
+
+        # 4. Maintainability Index (MI)
+        mi = 171.0 - (5.2 * math.log(max(1.0, volume))) - (0.23 * cc) - (16.2 * math.log(loc))
+        mi = round(max(0.0, min(100.0, mi)), 2)
+
+        # Remediation minutes estimation
+        remediation_minutes = 0
+        if mi < 50.0 or cc > 15 or cog > 15:
+            remediation_minutes = int(max(0, cc - 10) * 10 + max(0, cog - 10) * 10 + max(0.0, 60.0 - mi) * 2)
+
+        return ComplexityResult(
+            path=path,
+            cyclomatic_complexity=cc,
+            cognitive_complexity=cog,
+            maintainability_index=mi,
+            duplicate_blocks=[],
+            remediation_minutes=remediation_minutes
+        )
+
     def _calculate_lexical_complexity(self, content: str, path: str) -> ComplexityResult:
-        """Fallback lexical complexity parser using regex counting (for non-Python or broken files)."""
+        """Fallback lexical complexity parser using regex counting (for non-Python/non-JS or broken files)."""
         lines = [line.strip() for line in content.splitlines() if line.strip() and not line.strip().startswith(("//", "#", "/*", "*"))]
         loc = max(1, len(lines))
 
@@ -593,12 +727,17 @@ class CodeQualityAnalyzer:
         mi = 171.0 - (5.2 * math.log(volume)) - (0.23 * cc) - (16.2 * math.log(loc))
         mi = max(0.0, min(100.0, mi))
 
+        remediation_minutes = 0
+        if mi < 50.0 or cc > 15 or cog > 15:
+            remediation_minutes = int(max(0, cc - 10) * 10 + max(0, cog - 10) * 10 + max(0.0, 60.0 - mi) * 2)
+
         return ComplexityResult(
             path=path,
             cyclomatic_complexity=cc,
             cognitive_complexity=cog,
             maintainability_index=round(mi, 2),
-            duplicate_blocks=[]
+            duplicate_blocks=[],
+            remediation_minutes=remediation_minutes
         )
 
     def _scan_duplicates(self, files: List[FileInput]) -> Dict[str, List[DuplicateBlock]]:
@@ -632,7 +771,8 @@ class CodeQualityAnalyzer:
                             matching_file=match["path"],
                             start_line=i + 1,
                             line_count=block_size,
-                            snippet=snippet
+                            snippet=snippet,
+                            remediation_minutes=45
                         ))
                 else:
                     hashes[block_hash] = {
@@ -643,10 +783,16 @@ class CodeQualityAnalyzer:
         return duplicates_map
 
     def _scan_security(self, files: List[FileInput]) -> List[SecurityIssue]:
-        """Scan code files for security risks and secrets exposure."""
+        """Scan code files for security risks and secrets exposure with sha256 content caching."""
         issues = []
 
         for f in files:
+            content_hash = hashlib.sha256(f"{f.path}:{f.content}".encode("utf-8")).hexdigest()
+            if content_hash in self._content_security_cache:
+                issues.extend(self._content_security_cache[content_hash])
+                continue
+
+            file_issues = []
             lines = f.content.splitlines()
             for line_idx, line in enumerate(lines):
                 line_str = line.strip()
@@ -656,13 +802,19 @@ class CodeQualityAnalyzer:
 
                 for rule in self.SECURITY_RULES:
                     if re.search(rule["pattern"], line, re.IGNORECASE if rule["type"] == "sast" else 0):
-                        issues.append(SecurityIssue(
+                        file_issues.append(SecurityIssue(
                             path=f.path,
                             type=rule["type"],
                             severity=rule["severity"],
                             message=rule["message"],
-                            line_number=line_idx + 1
+                            line_number=line_idx + 1,
+                            rule_id=rule.get("id"),
+                            remediation_advice=rule.get("remediation_advice"),
+                            remediation_minutes=rule.get("remediation_minutes", 60)
                         ))
+
+            self._content_security_cache[content_hash] = file_issues
+            issues.extend(file_issues)
 
         return issues
 
@@ -1429,13 +1581,21 @@ class CodeQualityAnalyzer:
             
         logger.info(f"Starting code quality scan for {len(files_to_scan)} files...")
 
-        # 1. Complexity & Code metrics
+        # 1. Complexity & Code metrics with sha256 content caching
         complexity_results = []
         for f in files_to_scan:
-            if f.path.endswith(".py"):
-                comp = self._calculate_python_complexity(f.content, f.path)
+            content_hash = hashlib.sha256(f"{f.path}:{f.content}".encode("utf-8")).hexdigest()
+            if content_hash in self._content_complexity_cache:
+                comp = self._content_complexity_cache[content_hash].model_copy()
             else:
-                comp = self._calculate_lexical_complexity(f.content, f.path)
+                if f.path.endswith(".py"):
+                    comp = self._calculate_python_complexity(f.content, f.path)
+                elif f.path.endswith((".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")):
+                    comp = self._calculate_javascript_typescript_complexity(f.content, f.path)
+                else:
+                    comp = self._calculate_lexical_complexity(f.content, f.path)
+                self._content_complexity_cache[content_hash] = comp
+
             complexity_results.append(comp)
 
         # 2. Scanning duplication
@@ -1476,10 +1636,29 @@ class CodeQualityAnalyzer:
         # 11. Knowledge decay and silo mapping
         knowledge_decay = self._analyze_knowledge_decay(files_to_scan, request.git_history, ownership_results)
 
+        # 12. Technical Debt Remediation Estimation
+        total_debt_hours = self._calculate_technical_debt(
+            complexity_results=complexity_results,
+            security_issues=security_issues,
+            code_smells=code_smells,
+            dependency_cycles=dependency_cycles,
+            taint_issues=taint_issues,
+            duplication_map=duplication_map
+        )
+
+        # 13. Automated Quality Gate Evaluation
+        quality_gate = self._evaluate_quality_gate(
+            complexity_results=complexity_results,
+            security_issues=security_issues,
+            config=request.quality_gate_config,
+            total_debt_hours=total_debt_hours
+        )
+
         logger.info(
             f"Scan complete: found {len(security_issues)} security issues, {len(hotspots)} hotspots, "
             f"{len(code_smells)} code smells, {len(dependency_cycles)} dependency cycles, "
-            f"{len(semantic_clones)} semantic clones, {len(taint_issues)} taint issues."
+            f"{len(semantic_clones)} semantic clones, {len(taint_issues)} taint issues. "
+            f"Total technical debt: {total_debt_hours}h, Quality Gate: {quality_gate.status}."
         )
 
         return CodeAnalysisResult(
@@ -1492,10 +1671,120 @@ class CodeQualityAnalyzer:
             semantic_clones=semantic_clones,
             taint_issues=taint_issues,
             jit_commit_risks=jit_commit_risks,
-            knowledge_decay=knowledge_decay
+            knowledge_decay=knowledge_decay,
+            total_debt_hours=total_debt_hours,
+            quality_gate=quality_gate
+        )
+
+    def _calculate_technical_debt(
+        self,
+        complexity_results: List[ComplexityResult],
+        security_issues: List[SecurityIssue],
+        code_smells: List[CodeSmell],
+        dependency_cycles: List[DependencyCycle],
+        taint_issues: List[TaintIssue],
+        duplication_map: Dict[str, List[DuplicateBlock]]
+    ) -> float:
+        """Estimate total technical debt in developer remediation hours."""
+        total_minutes = 0
+
+        # Complexity debt (files with low maintainability or high cognitive complexity)
+        for comp in complexity_results:
+            if comp.maintainability_index < 60:
+                total_minutes += int((60 - comp.maintainability_index) * 3)
+            if comp.cognitive_complexity > 15:
+                total_minutes += (comp.cognitive_complexity - 15) * 10
+            for dup in comp.duplicate_blocks:
+                total_minutes += dup.remediation_minutes or 45
+
+        # Security debt
+        for sec in security_issues:
+            total_minutes += sec.remediation_minutes or (120 if sec.severity == "CRITICAL" else 60)
+
+        # Code smells debt
+        for smell in code_smells:
+            total_minutes += smell.remediation_minutes or 90
+
+        # Dependency cycles debt
+        for cycle in dependency_cycles:
+            total_minutes += cycle.remediation_minutes or 180
+
+        # Taint issues debt
+        for taint in taint_issues:
+            total_minutes += taint.remediation_minutes or 120
+
+        return round(total_minutes / 60.0, 2)
+
+    def _evaluate_quality_gate(
+        self,
+        complexity_results: List[ComplexityResult],
+        security_issues: List[SecurityIssue],
+        config: Optional[QualityGateConfig],
+        total_debt_hours: float
+    ) -> QualityGateResult:
+        """Evaluate automated Quality Gate policies against code quality metrics."""
+        cfg = config or QualityGateConfig()
+        violations: List[QualityGateViolation] = []
+
+        for comp in complexity_results:
+            if comp.cognitive_complexity > cfg.max_cognitive_complexity:
+                violations.append(QualityGateViolation(
+                    file_path=comp.path,
+                    rule="max_cognitive_complexity",
+                    severity="WARNING",
+                    message=f"Cognitive complexity ({comp.cognitive_complexity}) exceeds threshold of {cfg.max_cognitive_complexity}."
+                ))
+            if comp.cyclomatic_complexity > cfg.max_cyclomatic_complexity:
+                violations.append(QualityGateViolation(
+                    file_path=comp.path,
+                    rule="max_cyclomatic_complexity",
+                    severity="WARNING",
+                    message=f"Cyclomatic complexity ({comp.cyclomatic_complexity}) exceeds threshold of {cfg.max_cyclomatic_complexity}."
+                ))
+            if comp.maintainability_index < cfg.min_maintainability_index:
+                violations.append(QualityGateViolation(
+                    file_path=comp.path,
+                    rule="min_maintainability_index",
+                    severity="WARNING",
+                    message=f"Maintainability Index ({comp.maintainability_index}) is below minimum score of {cfg.min_maintainability_index}."
+                ))
+
+        for sec in security_issues:
+            if sec.severity == "CRITICAL" and not cfg.allow_critical_security:
+                violations.append(QualityGateViolation(
+                    file_path=sec.path,
+                    rule="no_critical_security",
+                    severity="CRITICAL",
+                    message=f"Critical security issue detected: {sec.message}"
+                ))
+            elif sec.severity == "HIGH" and not cfg.allow_high_security:
+                violations.append(QualityGateViolation(
+                    file_path=sec.path,
+                    rule="no_high_security",
+                    severity="CRITICAL",
+                    message=f"High severity security issue detected: {sec.message}"
+                ))
+
+        has_critical = any(v.severity == "CRITICAL" for v in violations)
+        if has_critical:
+            status = "FAILED"
+            passed = False
+        elif len(violations) > 0:
+            status = "WARNING"
+            passed = True
+        else:
+            status = "PASSED"
+            passed = True
+
+        return QualityGateResult(
+            status=status,
+            passed=passed,
+            total_debt_hours=total_debt_hours,
+            violations=violations
         )
 
 
 # Shared instance of the analyzer
 code_analyzer = CodeQualityAnalyzer()
+
 

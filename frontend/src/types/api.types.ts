@@ -56,7 +56,7 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
-export interface RefreshTokenResponse extends AuthTokens {}
+export type RefreshTokenResponse = AuthTokens;
 
 export interface ForgotPasswordRequest {
   email: string;

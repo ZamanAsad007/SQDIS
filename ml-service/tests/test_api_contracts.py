@@ -350,6 +350,8 @@ def test_code_quality_contracts_and_cache_validation():
             "taint_issues",
             "jit_commit_risks",
             "knowledge_decay",
+            "total_debt_hours",
+            "quality_gate",
         ],
     )
     assert payload["complexity"][0]["path"] == "src/app.py"

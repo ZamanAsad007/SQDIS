@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react'
 
 type ThemeContextType = {

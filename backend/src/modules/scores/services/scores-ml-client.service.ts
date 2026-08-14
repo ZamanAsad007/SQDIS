@@ -554,6 +554,7 @@ export class ScoresMlClientService {
       }>;
       coverage_metadata?: Record<string, number>;
       repository_id?: string;
+      quality_gate_config?: QualityGateConfig;
     }
   ): Promise<{
     complexity: Array<{
@@ -601,6 +602,8 @@ export class ScoresMlClientService {
       message: string;
       severity: string;
     }>;
+    total_debt_hours?: number;
+    quality_gate?: QualityGateResult;
   } | null> {
     try {
       const response = await fetch(`${this.mlServiceUrl}/api/ml/code-quality/analyze`, {
@@ -624,6 +627,41 @@ export class ScoresMlClientService {
   }
 
   /**
+   * Evaluate automated quality gate policies and technical debt via the ML service.
+   *
+   * @param payload - Analysis request with code files and optional policy config
+   * @returns Quality Gate result with status and violations
+   */
+  async evaluateQualityGate(
+    payload: {
+      files: Array<{ path: string; content: string }>;
+      quality_gate_config?: QualityGateConfig;
+      repository_id?: string;
+      coverage_metadata?: Record<string, number>;
+    }
+  ): Promise<QualityGateResult | null> {
+    try {
+      const response = await fetch(`${this.mlServiceUrl}/api/ml/code-quality/quality-gate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        this.logger.warn(`ML service quality gate evaluation failed with status ${response.status}`);
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      this.logger.warn(`Failed to evaluate quality gate: ${error}`);
+      return null;
+    }
+  }
+
+  /**
    * Clear AST analysis cache for a specific repository.
    */
   async clearCodeQualityCache(repositoryId: string): Promise<boolean> {
@@ -638,3 +676,35 @@ export class ScoresMlClientService {
     }
   }
 }
+
+/**
+ * Quality Gate configuration options
+ */
+export interface QualityGateConfig {
+  max_cognitive_complexity?: number;
+  max_cyclomatic_complexity?: number;
+  min_maintainability_index?: number;
+  allow_critical_security?: boolean;
+  allow_high_security?: boolean;
+}
+
+/**
+ * Single quality gate violation detail
+ */
+export interface QualityGateViolation {
+  file_path: string;
+  rule: string;
+  severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  message: string;
+}
+
+/**
+ * Quality Gate evaluation result
+ */
+export interface QualityGateResult {
+  status: 'PASSED' | 'WARNING' | 'FAILED';
+  passed: boolean;
+  total_debt_hours: number;
+  violations: QualityGateViolation[];
+}
+
