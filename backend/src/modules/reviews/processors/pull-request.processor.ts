@@ -13,6 +13,7 @@ export interface PullRequestJobData {
   pullRequest: ParsedPullRequestData;
   repositoryId: string;
   organizationId: string;
+  action?: string;
 }
 
 /**
@@ -39,16 +40,17 @@ export class PullRequestProcessor extends WorkerHost {
    * Process a pull request job from the queue
    */
   async process(job: Job<PullRequestJobData>): Promise<ProcessedPullRequestResult> {
-    this.logger.log(`Processing pull request job ${job.id}: PR ${job.data.pullRequest.prNumber}`);
+    this.logger.log(`Processing pull request job ${job.id}: PR ${job.data.pullRequest.prNumber} (action: ${job.data.action})`);
 
     try {
-      const { pullRequest, repositoryId, organizationId } = job.data;
+      const { pullRequest, repositoryId, organizationId, action } = job.data;
 
       // Process the pull request using the reviews service
       const result = await this.reviewsService.processPullRequestFromQueue(
         pullRequest,
         repositoryId,
         organizationId,
+        action,
       );
 
       this.logger.log(`Successfully processed PR ${pullRequest.prNumber}`);

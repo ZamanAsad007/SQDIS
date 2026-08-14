@@ -7,6 +7,8 @@ import { AuthModule } from '../auth/auth.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { ScoresModule } from '../scores/scores.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
+import { GitHubModule } from '../github/github.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ReviewQueueModule, ReviewCommentQueueModule, PullRequestQueueModule } from '../../config';
 
 /**
@@ -22,6 +24,8 @@ import { ReviewQueueModule, ReviewCommentQueueModule, PullRequestQueueModule } f
     forwardRef(() => OrganizationsModule),
     forwardRef(() => ScoresModule),
     forwardRef(() => OnboardingModule),
+    forwardRef(() => GitHubModule),
+    forwardRef(() => NotificationsModule),
   ],
   controllers: [ReviewsController],
   providers: [ReviewsService, ReviewProcessor, ReviewCommentProcessor, PullRequestProcessor],

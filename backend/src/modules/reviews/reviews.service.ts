@@ -1,5 +1,5 @@
 // Reviews Service - Fixed mergedAt null error
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma';
 import {
@@ -18,6 +18,7 @@ import {
   TurnaroundClass,
   CommentClass,
   MilestoneType,
+  NotificationType,
 } from '@prisma/client';
 import {
   ParsedReviewData,
@@ -31,6 +32,10 @@ import {
   ReviewSubmittedEvent,
   PrMergedEvent,
 } from '../onboarding/interfaces/milestone-events.interface';
+import { GitHubService } from '../github/github.service';
+import { GitHubApiService } from '../github/services/github-api.service';
+import { ScoresMlClientService } from '../scores/services/scores-ml-client.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReviewsService {
@@ -41,6 +46,18 @@ export class ReviewsService {
     @Inject(forwardRef(() => OnboardingService))
     private readonly onboardingService: OnboardingService,
     private readonly eventEmitter: EventEmitter2,
+    @Optional()
+    @Inject(forwardRef(() => GitHubService))
+    private readonly githubService?: GitHubService,
+    @Optional()
+    @Inject(forwardRef(() => GitHubApiService))
+    private readonly gitHubApiService?: GitHubApiService,
+    @Optional()
+    @Inject(forwardRef(() => ScoresMlClientService))
+    private readonly scoresMlClientService?: ScoresMlClientService,
+    @Optional()
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   /**
@@ -1110,36 +1127,122 @@ export class ReviewsService {
    * @param pullRequest - Parsed pull request data from webhook
    * @param repositoryId - Internal repository ID
    * @param organizationId - Organization ID
+   * @param action - The PR event action (opened, synchronize, closed, etc.)
    * @returns Processed pull request result
    */
   async processPullRequestFromQueue(
     pullRequest: ParsedPullRequestData,
     repositoryId: string,
     organizationId: string,
+    action?: string,
   ): Promise<{ prId: number; prNumber: number; authorId: string | null }> {
-    this.logger.log(`Processing merged PR ${pullRequest.prId} (#${pullRequest.prNumber})`);
+    this.logger.log(`Processing PR ${pullRequest.prId} (#${pullRequest.prNumber}, action: ${action || 'sync'})`);
 
     // Find PR author by GitHub ID
     const author = await this.prisma.user.findFirst({
       where: { githubId: String(pullRequest.authorId) },
     });
 
-    // Publish pr.merged event for milestone tracking
-    this.publishPrMergedEvent(
-      String(pullRequest.prId),
-      pullRequest.prNumber,
-      repositoryId,
-      organizationId,
-      author?.id,
-      pullRequest.mergedAt || new Date(),
-    );
+    // 1. If PR is merged, emit pr.merged event for milestone tracking
+    if (pullRequest.merged || (action === 'closed' && pullRequest.mergedAt)) {
+      this.publishPrMergedEvent(
+        String(pullRequest.prId),
+        pullRequest.prNumber,
+        repositoryId,
+        organizationId,
+        author?.id,
+        pullRequest.mergedAt || new Date(),
+      );
+      this.logger.log(`Published pr.merged event for PR #${pullRequest.prNumber}`);
+    }
 
-    this.logger.log(`Published pr.merged event for PR #${pullRequest.prNumber}`);
+    // 2. If PR is opened or synchronized (new commits pushed), trigger automated Quality Gate check
+    if (action === 'opened' || action === 'synchronize') {
+      await this.evaluateAndPostPRQualityGate(pullRequest, repositoryId, organizationId, author?.id);
+    }
 
     return {
       prId: pullRequest.prId,
       prNumber: pullRequest.prNumber,
       authorId: author?.id || null,
     };
+  }
+
+  /**
+   * Run automated Quality Gate scan for PR and post summary bot comment
+   */
+  private async evaluateAndPostPRQualityGate(
+    pullRequest: ParsedPullRequestData,
+    repositoryId: string,
+    organizationId: string,
+    authorUserId?: string,
+  ): Promise<void> {
+    try {
+      if (!this.githubService || !this.gitHubApiService || !this.scoresMlClientService) {
+        this.logger.debug('Skipping PR Quality Gate: required GitHub/ML services not available');
+        return;
+      }
+
+      const repository = await this.prisma.repository.findUnique({
+        where: { id: repositoryId },
+      });
+      if (!repository || !repository.fullName) return;
+
+      const octokit = await this.githubService.getOctokitForOrganization(organizationId);
+      if (!octokit) {
+        this.logger.warn(`No GitHub connection found for organization ${organizationId}`);
+        return;
+      }
+
+      const [owner, repoName] = repository.fullName.split('/');
+      const codeFiles = await this.gitHubApiService.fetchRepositoryCodeFiles(octokit, owner, repoName, 30);
+      if (!codeFiles || codeFiles.length === 0) return;
+
+      const gateResult = await this.scoresMlClientService.evaluateQualityGate({
+        files: codeFiles,
+        repository_id: repositoryId,
+      });
+
+      if (!gateResult) return;
+
+      await this.gitHubApiService.postPullRequestQualitySummary(
+        octokit,
+        owner,
+        repoName,
+        pullRequest.prNumber,
+        {
+          status: gateResult.status,
+          totalDebtHours: gateResult.total_debt_hours,
+          securityIssuesCount: gateResult.violations.filter((v) => v.rule.includes('security')).length,
+          violations: gateResult.violations.map((v) => ({
+            rule: v.rule,
+            message: v.message,
+            severity: v.severity,
+          })),
+          quickWins: gateResult.passed
+            ? ['Clean scan! Maintain current quality standards.']
+            : ['Resolve blocking quality gate violations to pass CI checks.'],
+        },
+      );
+
+      // If Quality Gate failed, send in-app notification to author
+      if (gateResult.status === 'FAILED' && this.notificationsService && authorUserId) {
+        await this.notificationsService.create({
+          userId: authorUserId,
+          organizationId,
+          type: NotificationType.ALERT,
+          title: `Quality Gate Failed for PR #${pullRequest.prNumber}`,
+          message: `Your PR #${pullRequest.prNumber} in ${repository.name} has failed quality gate checks with ${gateResult.violations.length} violations.`,
+          metadata: {
+            prNumber: pullRequest.prNumber,
+            repositoryId,
+            violations: gateResult.violations,
+            debtHours: gateResult.total_debt_hours,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.warn(`Error during PR Quality Gate execution: ${error}`);
+    }
   }
 }
