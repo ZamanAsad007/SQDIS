@@ -269,4 +269,81 @@ export class GitHubApiService {
       return [];
     }
   }
+
+  /**
+   * Post an automated Pull Request Quality Gate and Technical Debt summary comment
+   *
+   * @param octokit - Authenticated Octokit instance
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param pullNumber - Pull Request number
+   * @param summary - Quality gate and debt summary data
+   */
+  async postPullRequestQualitySummary(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    summary: {
+      status: 'PASSED' | 'WARNING' | 'FAILED';
+      totalDebtHours: number;
+      cognitiveComplexity?: number;
+      securityIssuesCount: number;
+      violations?: Array<{ rule: string; message: string; severity: string }>;
+      quickWins?: string[];
+    },
+  ): Promise<{ commentId: number }> {
+    this.logger.debug(`Posting PR quality summary on ${owner}/${repo}#${pullNumber}`);
+
+    const statusBadge =
+      summary.status === 'PASSED'
+        ? '✅ **PASSED**'
+        : summary.status === 'WARNING'
+          ? '⚠️ **WARNING**'
+          : '❌ **FAILED**';
+
+    let commentBody = `### 🛡️ SQDIS Quality Gate: ${statusBadge}\n\n`;
+    commentBody += `| Metric | Value |\n| :--- | :--- |\n`;
+    commentBody += `| **Technical Debt** | \`${summary.totalDebtHours} hrs\` |\n`;
+    if (summary.cognitiveComplexity !== undefined) {
+      commentBody += `| **Max Cognitive Complexity** | \`${summary.cognitiveComplexity}\` |\n`;
+    }
+    commentBody += `| **Security Vulnerabilities** | \`${summary.securityIssuesCount}\` |\n\n`;
+
+    if (summary.violations && summary.violations.length > 0) {
+      commentBody += `#### ⚠️ Quality Gate Violations:\n`;
+      for (const v of summary.violations) {
+        commentBody += `* **[${v.severity}]** \`${v.rule}\`: ${v.message}\n`;
+      }
+      commentBody += `\n`;
+    }
+
+    if (summary.quickWins && summary.quickWins.length > 0) {
+      commentBody += `#### 💡 Top Quick Wins:\n`;
+      for (const win of summary.quickWins) {
+        commentBody += `* ${win}\n`;
+      }
+      commentBody += `\n`;
+    }
+
+    commentBody += `*Automated code health report by SQDIS ML Service.*`;
+
+    try {
+      const { data } = await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: pullNumber,
+        body: commentBody,
+      });
+
+      this.logger.log(
+        `Successfully posted PR quality summary comment #${data.id} on ${owner}/${repo}#${pullNumber}`,
+      );
+      return { commentId: data.id };
+    } catch (error) {
+      this.logger.error(`Failed to post PR quality summary comment: ${error}`);
+      throw error;
+    }
+  }
 }
+

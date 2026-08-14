@@ -149,3 +149,33 @@ def test_quality_gate_failed_on_critical_security():
     assert result.quality_gate.passed is False
     assert len(result.quality_gate.violations) > 0
     assert any(v.severity == "CRITICAL" for v in result.quality_gate.violations)
+
+
+def test_sha256_content_caching_performance():
+    """Verify repeat scans reuse cached complexity and security analysis."""
+    files = [
+        FileInput(
+            path="src/utils/cached_sample.ts",
+            content="""
+            export function calculate(val: number) {
+                if (val > 10) {
+                    return val * 2;
+                }
+                return val;
+            }
+            """
+        )
+    ]
+
+    req = CodeAnalysisRequest(files=files)
+    
+    # 1. First run populates cache
+    res1 = code_analyzer.analyze(req)
+    assert len(code_analyzer._content_complexity_cache) > 0
+    assert len(code_analyzer._content_security_cache) > 0
+
+    # 2. Second run reuses cache
+    res2 = code_analyzer.analyze(req)
+    assert res1.complexity[0].cyclomatic_complexity == res2.complexity[0].cyclomatic_complexity
+    assert res1.complexity[0].maintainability_index == res2.complexity[0].maintainability_index
+    assert res1.total_debt_hours == res2.total_debt_hours
