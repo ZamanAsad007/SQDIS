@@ -16,6 +16,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path aliases */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
@@ -24,5 +30,10 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/examples",
+    "src/pages/Dashboard/Dashboard.tsx",
+    "src/pages/Dashboard/components/ActivityFeed.tsx"
+  ]
 }

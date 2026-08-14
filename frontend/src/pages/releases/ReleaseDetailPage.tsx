@@ -1,0 +1,137 @@
+import { useParams, Link } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Rocket, CheckCircle2, AlertTriangle, ShieldCheck, Clock, Download, Calendar } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { releasesService } from '@/services'
+import { queryKeys } from '@/lib/queryClient'
+import { PageHeader, MetricTile, QueryState } from '../pageUtils'
+import type { ReleaseStatus } from '@/types'
+
+export function ReleaseDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const queryClient = useQueryClient()
+
+  const releaseQuery = useQuery({
+    queryKey: queryKeys.releases.detail(id ?? ''),
+    queryFn: () => releasesService.getById(id!),
+    enabled: !!id,
+  })
+
+  const readinessQuery = useQuery({
+    queryKey: queryKeys.releases.readiness(id ?? ''),
+    queryFn: () => releasesService.getReadiness(id!),
+    enabled: !!id,
+  })
+
+  const updateStatusMutation = useMutation({
+    mutationFn: (status: ReleaseStatus) => releasesService.update(id!, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.releases.detail(id!) })
+    },
+  })
+
+  const release = releaseQuery.data
+  const readiness = readinessQuery.data
+
+  return (
+    <div>
+      <div className="mb-4">
+        <Link to="/releases" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+          <ArrowLeft className="h-4 w-4" /> Back to Releases
+        </Link>
+      </div>
+
+      <QueryState isLoading={releaseQuery.isLoading} error={releaseQuery.error} onRetry={() => releaseQuery.refetch()}>
+        {release && (
+          <div>
+            <PageHeader
+              title={release.version}
+              description={`Target deployment date: ${release.targetDate ? new Date(release.targetDate).toLocaleDateString() : 'TBD'}`}
+              action={
+                <div className="flex gap-2">
+                  {release.status !== 'RELEASED' && (
+                    <Button
+                      onClick={() => updateStatusMutation.mutate('RELEASED')}
+                      isLoading={updateStatusMutation.isPending}
+                      className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <Rocket className="h-4 w-4" /> Ship Release
+                    </Button>
+                  )}
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" /> Export Report
+                  </Button>
+                </div>
+              }
+            />
+
+            <div className="mb-6 grid gap-4 md:grid-cols-3">
+              <MetricTile label="Release Status" value={release.status} icon={<Clock className="h-5 w-5" />} />
+              <MetricTile
+                label="Readiness Score"
+                value={`${Math.round(readiness?.score ?? release.readiness?.score ?? 0)}%`}
+                icon={<ShieldCheck className="h-5 w-5" />}
+              />
+              <MetricTile label="Associated Sprints" value={release.sprints?.length ?? 0} icon={<CheckCircle2 className="h-5 w-5" />} />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-500" /> Associated Sprints
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {release.sprints?.map((sprint) => (
+                      <div key={sprint.id} className="py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-900 dark:text-slate-100">{sprint.name}</p>
+                            <p className="text-xs text-slate-500">
+                              {sprint.team?.name || 'Team not assigned'} • {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant="outline">{sprint.id.slice(0, 8)}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                    {(!release.sprints || release.sprints.length === 0) && (
+                      <p className="py-6 text-center text-sm text-slate-500">No sprints are linked to this release yet.</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-emerald-500" /> Readiness Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  {readiness?.breakdown?.length ? (
+                    readiness.breakdown.map((item) => (
+                      <div key={item.category} className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                        <span className="text-slate-600 dark:text-slate-400">{item.category}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{Math.round(item.score)}%</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <span>Readiness metrics are not available yet.</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </QueryState>
+    </div>
+  )
+}
