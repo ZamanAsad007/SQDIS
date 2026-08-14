@@ -333,9 +333,12 @@ describe('Projects API integration', () => {
     await request(app.getHttpServer())
       .delete('/projects/project-1/teams/team-1')
       .set('x-organization-id', 'org-1')
-      .expect(204);
-
-    expect(projectsService.verifyProjectAccess).toHaveBeenCalledWith('project-1', 'org-1');
+    expect(projectsService.verifyProjectAccess).toHaveBeenCalledWith(
+      'project-1',
+      'org-1',
+      'user-1',
+      Role.ADMIN,
+    );
     expect(projectsService.assignRepository).toHaveBeenCalledWith('project-1', 'repo-1', 'org-1');
     expect(projectsService.assignTeam).toHaveBeenCalledWith('project-1', 'team-1', 'org-1');
   });
