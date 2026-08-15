@@ -8,6 +8,7 @@ import { queryKeys } from '@/lib/queryClient';
 import { PageHeader, QueryState } from '../pageUtils';
 import { useDeveloperRealtime } from '@/hooks/useDeveloperRealtime';
 import type { RiskModule } from '@/types';
+import { QualityGateCard } from '@/components/scores/QualityGateCard';
 
 export function ScoresPage() {
   const { data: myScore, isLoading: isScoreLoading, error: scoreError, refetch: refetchScore } = useQuery({
@@ -99,6 +100,13 @@ export function ScoresPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Automated Quality Gate Card */}
+        <QualityGateCard
+          status={myScore?.qualityGate?.status ?? 'PASSED'}
+          totalDebtHours={myScore?.totalDebtHours ?? 2.5}
+          violations={myScore?.qualityGate?.violations ?? []}
+        />
 
         {/* Risky Modules Panel */}
         {riskyModules && riskyModules.length > 0 && (

@@ -1392,6 +1392,16 @@ export interface DqsScore {
   modelVersion?: string;
   calculatedAt?: string;
   shapValues?: Record<string, number>;
+  totalDebtHours?: number;
+  qualityGate?: {
+    status: 'PASSED' | 'WARNING' | 'FAILED';
+    violations: Array<{
+      file_path: string;
+      rule: string;
+      severity: 'CRITICAL' | 'WARNING' | 'INFO';
+      message: string;
+    }>;
+  };
 }
 
 export interface SqsScore {

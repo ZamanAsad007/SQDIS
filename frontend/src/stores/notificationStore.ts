@@ -30,7 +30,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
             const items = Array.isArray(data) ? data : data.data
             set({
                 notifications: items,
-                unreadCount: items.filter((notification) => !notification.read).length,
+                unreadCount: items.filter((notification: Notification) => !notification.read).length,
                 isLoading: false,
             })
         } catch (error) {
@@ -52,9 +52,9 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
     markAsRead: async (id: string) => {
         try {
             await notificationsService.markAsRead(id)
-            const notification = get().notifications.find((item) => item.id === id)
+            const notification = get().notifications.find((item: Notification) => item.id === id)
             set({
-                notifications: get().notifications.map((n) =>
+                notifications: get().notifications.map((n: Notification) =>
                     n.id === id ? { ...n, read: true, readAt: n.readAt ?? new Date().toISOString() } : n,
                 ),
                 unreadCount: notification && !notification.read
@@ -73,7 +73,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
             await notificationsService.markAllAsRead()
             const readAt = new Date().toISOString()
             set({
-                notifications: get().notifications.map((n) => ({ ...n, read: true, readAt: n.readAt ?? readAt })),
+                notifications: get().notifications.map((n: Notification) => ({ ...n, read: true, readAt: n.readAt ?? readAt })),
                 unreadCount: 0,
             })
         } catch (error) {
@@ -86,9 +86,9 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
     removeNotification: async (id: string) => {
         try {
             await notificationsService.delete(id)
-            const removed = get().notifications.find((n) => n.id === id)
+            const removed = get().notifications.find((n: Notification) => n.id === id)
             set({
-                notifications: get().notifications.filter((n) => n.id !== id),
+                notifications: get().notifications.filter((n: Notification) => n.id !== id),
                 unreadCount: removed && !removed.read
                     ? Math.max(0, get().unreadCount - 1)
                     : get().unreadCount,
