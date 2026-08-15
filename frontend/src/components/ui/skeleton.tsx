@@ -1,7 +1,7 @@
-import React from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-export type SkeletonProps = React.HTMLAttributes<HTMLDivElement>
+export type SkeletonProps = HTMLAttributes<HTMLDivElement>
 
 export function Skeleton({ className, ...props }: SkeletonProps) {
   return (
@@ -47,3 +47,22 @@ export function SkeletonCard({ className }: { className?: string }) {
     </div>
   )
 }
+
+export interface ChartLoaderProps {
+  isLoading: boolean
+  children: ReactNode
+}
+
+export function ChartLoader({ isLoading, children }: ChartLoaderProps) {
+  if (isLoading) {
+    return (
+      <div className="space-y-3 p-4">
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+
