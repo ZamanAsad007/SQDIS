@@ -559,7 +559,7 @@ Done when:
 Status:
 - **Completed**: Route pages converted across Auth, Dashboard, Developers, Operations, Settings, and Real-Time Audit pages with consistent visual hierarchy and semantic token colors.
 
-### Phase 5: Hardcoded Color Cleanup - [x] IN PROGRESS / STABILIZED
+### Phase 5: Hardcoded Color Cleanup - [x] COMPLETED
 Goal:
 - Remove or centralize color literals discovered in Section 6.
 
@@ -571,7 +571,7 @@ Done when:
 - Most visual styling comes from semantic tokens, not scattered literals.
 
 Status:
-- **Stabilized**: Hardcoded color literals mapped and centralized; critical domain components and SVG/chart palettes reference dedicated color tokens.
+- **Completed**: Hardcoded color literals mapped and centralized; critical domain components and SVG/chart palettes reference dedicated color tokens.
 
 ### Phase 6: Accessibility and Visual QA - [x] COMPLETED
 Goal:
@@ -685,12 +685,12 @@ Use consistent state mapping across pages/components:
 - Negative series: `#ef4444`
 - Neutral series: `#94a3b8`
 
-## 10. Theme Safety Checklist
-- Ensure contrast remains acceptable for text on cards, badges, alerts, and tables.
-- Verify destructive/success/warning/info remain visually distinct in both themes.
-- Check focus ring visibility (`ring-*`) on keyboard navigation.
-- Verify chart palette readability against both light and dark backgrounds.
-- Test at least one dense table page and one card-heavy dashboard page in both modes.
+## 10. Theme Safety Checklist - [x] VERIFIED
+- [x] Ensure contrast remains acceptable for text on cards, badges, alerts, and tables.
+- [x] Verify destructive/success/warning/info remain visually distinct in both themes.
+- [x] Check focus ring visibility (`ring-*`) on keyboard navigation.
+- [x] Verify chart palette readability against both light and dark backgrounds.
+- [x] Test at least one dense table page and one card-heavy dashboard page in both modes.
 
 ## 11. Notes
 - Current implementation is dark-biased; the palette above intentionally rebalances both modes.
@@ -704,7 +704,8 @@ Use consistent state mapping across pages/components:
 | Phase 2 | Shared Component Normalization | Completed | `frontend/src/components/ui/` (`button`, `card`, `badge`, `input`, `modal`, `toast`) |
 | Phase 3 | App Shell Retheme | Completed | `frontend/src/components/layout/` (`MainLayout`, `Sidebar`, `Header`, `AuthLayout`) |
 | Phase 4 | Page-Level Conversion | Completed | `frontend/src/pages/` (Auth, Dashboard, Developers, Operations, Settings) |
-| Phase 5 | Hardcoded Color Cleanup | Stabilized | Color token map & chart color definitions |
+| Phase 5 | Hardcoded Color Cleanup | Completed | Color token map & chart color definitions |
 | Phase 6 | Accessibility & Visual QA | Completed | WCAG contrast & focus indicators (`ring-*`) verified |
 | Phase 7 | Final Stabilization | Completed | `frontend/design.md` updated and pushed to `design-fix` branch |
+
 
