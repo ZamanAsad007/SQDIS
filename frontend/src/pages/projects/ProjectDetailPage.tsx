@@ -12,11 +12,15 @@ import { projectsService } from '@/services'
 import { queryKeys } from '@/lib/queryClient'
 import { PageHeader, MetricTile, QueryState, formatScore } from '../pageUtils'
 import type { ProjectMetrics } from '@/types'
+import { useProjectRealtime } from '@/hooks/useProjectRealtime'
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  // Realtime updates over WS
+  useProjectRealtime(id)
   
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
