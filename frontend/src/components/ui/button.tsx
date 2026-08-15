@@ -25,20 +25,20 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:
-    'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 focus-visible:ring-slate-400',
+    'bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90 focus-visible:ring-ring shadow-sm',
   primary:
-    'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 focus-visible:ring-blue-500 shadow-sm',
+    'bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring shadow-sm',
   secondary:
-    'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 focus-visible:ring-slate-400',
+    'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-ring',
   outline:
-    'border border-slate-300 dark:border-slate-700 bg-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:ring-slate-400',
+    'border border-input bg-background hover:bg-accent hover:text-accent-foreground text-foreground focus-visible:ring-ring',
   ghost:
-    'bg-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:ring-slate-400',
+    'bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring',
   danger:
-    'bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500 focus-visible:ring-rose-500 shadow-sm',
+    'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-ring shadow-sm',
   destructive:
-    'bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500 focus-visible:ring-rose-500 shadow-sm',
-  link: 'text-blue-600 dark:text-blue-400 underline-offset-4 hover:underline p-0 h-auto bg-transparent',
+    'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-ring shadow-sm',
+  link: 'text-primary underline-offset-4 hover:underline p-0 h-auto bg-transparent',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {

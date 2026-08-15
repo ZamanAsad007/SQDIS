@@ -3,12 +3,98 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 220 23% 97%;
+    --foreground: 224 39% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 39% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 39% 11%;
+
+    --primary: 238 68% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 224 30% 20%;
+
+    --muted: 220 20% 94%;
+    --muted-foreground: 220 12% 42%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 18% 88%;
+    --input: 220 18% 88%;
+    --ring: 238 68% 55%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 28% 9%;
+    --foreground: 220 20% 95%;
+
+    --card: 224 25% 12%;
+    --card-foreground: 220 20% 95%;
+
+    --popover: 224 25% 12%;
+    --popover-foreground: 220 20% 95%;
+
+    --primary: 238 90% 68%;
+    --primary-foreground: 224 28% 9%;
+
+    --secondary: 223 18% 19%;
+    --secondary-foreground: 220 20% 92%;
+
+    --muted: 223 18% 19%;
+    --muted-foreground: 220 14% 70%;
+
+    --accent: 192 85% 55%;
+    --accent-foreground: 224 28% 9%;
+
+    --destructive: 0 84% 63%;
+    --destructive-foreground: 224 28% 9%;
+
+    --border: 223 17% 24%;
+    --input: 223 17% 24%;
+    --ring: 238 90% 68%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
   html,
   body {
     height: 100%;
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100;
+    @apply bg-background text-foreground transition-colors duration-200 antialiased;
   }
 }
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60;
+  }
+
+  .bg-grid-pattern {
+    background-size: 32px 32px;
+    background-image: linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 15px -3px rgba(99, 102, 241, 0.25);
+  }
+}
+
