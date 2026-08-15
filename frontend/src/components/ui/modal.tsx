@@ -65,29 +65,29 @@ export function Modal({
       {/* Modal Dialog */}
       <div
         className={cn(
-          'relative w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl transition-all animate-in zoom-in-95 fade-in duration-200 flex flex-col z-10 my-auto max-h-[90vh]',
+          'relative w-full rounded-xl bg-card text-card-foreground border border-border shadow-2xl transition-all animate-in zoom-in-95 fade-in duration-200 flex flex-col z-10 my-auto max-h-[90vh]',
           sizeClasses[size],
           className
         )}
       >
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 p-5 sm:p-6">
+          <div className="flex items-start justify-between border-b border-border p-5 sm:p-6">
             <div>
               {title && (
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="text-lg font-semibold text-card-foreground">
                   {title}
                 </h3>
               )}
               {description && (
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {description}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -97,7 +97,7 @@ export function Modal({
         {!title && !description && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            className="absolute top-4 right-4 z-10 rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -108,7 +108,7 @@ export function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end border-t border-slate-200 dark:border-slate-800 p-4 sm:px-6 bg-slate-50/50 dark:bg-slate-900/50 rounded-b-xl">
+          <div className="flex items-center justify-end border-t border-border p-4 sm:px-6 bg-muted/40 rounded-b-xl">
             {footer}
           </div>
         )}
