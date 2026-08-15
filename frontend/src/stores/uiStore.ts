@@ -47,24 +47,24 @@ export const useUIStore = create<UIState>()(
       modalData: null,
 
       toggleSidebar: () => {
-        set((state) => ({ sidebarOpen: !state.sidebarOpen }))
+        set((state: UIState) => ({ sidebarOpen: !state.sidebarOpen }))
       },
 
-      setSidebarOpen: (open) => {
+      setSidebarOpen: (open: boolean) => {
         set({ sidebarOpen: open })
       },
 
-      setSidebarCollapsed: (collapsed) => {
+      setSidebarCollapsed: (collapsed: boolean) => {
         set({ sidebarCollapsed: collapsed })
       },
 
-      setTheme: (theme) => {
+      setTheme: (theme: Theme) => {
         const resolved = theme === 'system' ? getSystemTheme() : theme
         applyTheme(resolved)
         set({ theme, resolvedTheme: resolved })
       },
 
-      openModal: (modalId, data) => {
+      openModal: (modalId: string, data?: Record<string, unknown>) => {
         set({ activeModal: modalId, modalData: data || null })
       },
 
@@ -74,11 +74,11 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'ui-storage',
-      partialize: (state) => ({
+      partialize: (state: UIState) => ({
         theme: state.theme,
         sidebarCollapsed: state.sidebarCollapsed,
       }),
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state?: UIState) => {
         if (state) {
           const resolved = state.theme === 'system' ? getSystemTheme() : state.theme
           applyTheme(resolved)

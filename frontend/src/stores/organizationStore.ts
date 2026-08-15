@@ -29,13 +29,13 @@ export const useOrganizationStore = create<OrganizationState>()(
       isHydrated: false,
       error: null,
 
-      setCurrentOrganization: (org) => {
+      setCurrentOrganization: (org: Organization | null) => {
         set({ currentOrganization: org })
         // Sync with API service
         setCurrentOrganizationId(org?.id || null)
       },
 
-      setOrganizations: (orgs) => {
+      setOrganizations: (orgs: Organization[]) => {
         set({ organizations: orgs })
         // If no current org is set, set the first one
         if (!get().currentOrganization && orgs.length > 0) {
@@ -61,12 +61,12 @@ export const useOrganizationStore = create<OrganizationState>()(
         }
       },
 
-      switchOrganization: async (orgId) => {
-        let org = get().organizations.find((o) => o.id === orgId)
+      switchOrganization: async (orgId: string) => {
+        let org = get().organizations.find((o: Organization) => o.id === orgId)
 
         if (!org) {
           const orgs = await get().fetchOrganizations()
-          org = orgs.find((item) => item.id === orgId)
+          org = orgs.find((item: Organization) => item.id === orgId)
         }
 
         if (!org) {
@@ -84,7 +84,7 @@ export const useOrganizationStore = create<OrganizationState>()(
         setCurrentOrganizationId(null)
       },
 
-      setHydrated: (hydrated) => {
+      setHydrated: (hydrated: boolean) => {
         set({ isHydrated: hydrated })
       },
 
@@ -94,11 +94,11 @@ export const useOrganizationStore = create<OrganizationState>()(
     }),
     {
       name: 'organization-storage',
-      partialize: (state) => ({
+      partialize: (state: OrganizationState) => ({
         currentOrganization: state.currentOrganization, // This includes the role field
         organizations: state.organizations, // Also persist all organizations with roles
       }),
-      onRehydrateStorage: () => (state, error) => {
+      onRehydrateStorage: () => (state?: OrganizationState, error?: Error | unknown) => {
         if (error) {
           console.error('[OrganizationStore] Rehydration error:', error)
           return
