@@ -7,6 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
+type NotificationCategoryKey =
+  | 'sqsDrops'
+  | 'newDebt'
+  | 'buildFailures'
+  | 'prReviews'
+  | 'mentions'
+  | 'teamAnnouncements'
+  | 'weeklyDigest'
+  | 'billingAlerts'
+
 export function NotificationSettings() {
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -33,17 +43,14 @@ export function NotificationSettings() {
     billingAlerts: { email: true, inApp: true },
   })
 
-  const handleToggle = (category: string, channel: 'email' | 'inApp') => {
-    setSettings((prev) => {
-      const cat = category as keyof typeof prev
-      return {
-        ...prev,
-        [cat]: {
-          ...prev[cat],
-          [channel]: !prev[cat][channel]
-        }
-      }
-    })
+  const handleToggle = (category: NotificationCategoryKey, channel: 'email' | 'inApp') => {
+    setSettings((prev) => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [channel]: !prev[category][channel],
+      },
+    }))
   }
 
   const handleSave = () => {

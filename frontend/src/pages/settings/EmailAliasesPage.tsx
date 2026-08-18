@@ -14,6 +14,7 @@ import { emailAliasesService } from '@/services'
 import { queryKeys } from '@/lib/queryClient'
 import { useAuthStore } from '@/stores/authStore'
 import { QueryState } from '../pageUtils'
+import type { EmailAlias } from '@/types'
 
 export function EmailAliasesPage() {
   const queryClient = useQueryClient()
