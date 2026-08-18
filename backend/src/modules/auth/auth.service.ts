@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
   BadRequestException,
+  NotFoundException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -11,6 +12,8 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthResponse, AuthUser } from './types/auth-response.type';
 import { JwtPayload, RefreshTokenPayload } from './types/jwt-payload.types';
 import { hashPassword, verifyPassword } from './utils/password.util';
@@ -766,4 +769,81 @@ export class AuthService {
     return { deletedCount: result.count };
   }
 
+  /**
+   * Update profile information for current authenticated user
+   */
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<AuthUser> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const dataToUpdate: { name?: string; avatarUrl?: string } = {};
+    if (dto.name !== undefined && dto.name.trim().length > 0) {
+      dataToUpdate.name = dto.name.trim();
+    }
+    if (dto.avatarUrl !== undefined) {
+      dataToUpdate.avatarUrl = dto.avatarUrl;
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: dataToUpdate,
+    });
+
+    const authUser = await this.getCurrentUser(updatedUser.id);
+    if (!authUser) {
+      return {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        avatarUrl: updatedUser.avatarUrl ?? undefined,
+        createdAt: updatedUser.createdAt,
+      };
+    }
+
+    return authUser;
+  }
+
+  /**
+   * Change password for current authenticated user
+   */
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+    ipAddress?: string,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.passwordHash) {
+      throw new BadRequestException('Cannot change password for this account. If you signed in with OAuth, please use your OAuth provider.');
+    }
+
+    const isCurrentPasswordValid = await verifyPassword(
+      dto.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    const newPasswordHash = await hashPassword(dto.newPassword);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newPasswordHash },
+    });
+
+    this.auditLoggerService.logPasswordResetSuccess(user.id, ipAddress || 'unknown');
+
+    return {
+      message: 'Password changed successfully',
+    };
+  }
 }

@@ -4,3 +4,5 @@ export * from './refresh.dto.js';
 export * from './register.dto.js';
 export * from './reset-password.dto.js';
 export * from './switch-organization.dto.js';
+export * from './update-profile.dto.js';
+export * from './change-password.dto.js';
