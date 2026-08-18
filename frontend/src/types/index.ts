@@ -474,17 +474,27 @@ export interface SprintTimelineEntry {
   teamName: string;
 }
 
+export interface SprintBurndownPoint {
+  date: string;
+  idealRemaining?: number;
+  actualRemaining?: number;
+  ideal?: number;
+  remaining?: number;
+  completed?: number;
+}
+
 export interface SprintBurndown {
   sprintId: string;
-  sprintName: string;
-  startDate: string;
-  endDate: string;
-  data: Array<{
-    date: string;
-    remaining: number;
-    ideal: number;
-    completed?: number;
-  }>;
+  sprintName?: string;
+  startDate?: string;
+  endDate?: string;
+  totalWork?: number;
+  completedWork?: number;
+  remainingWork?: number;
+  burndownData?: SprintBurndownPoint[];
+  data?: SprintBurndownPoint[];
+  projectedCompletion?: string | null;
+  isOnTrack?: boolean;
 }
 
 export interface SprintHealth {

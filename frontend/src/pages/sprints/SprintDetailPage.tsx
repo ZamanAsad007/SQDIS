@@ -20,6 +20,7 @@ import type { SprintStatus, Commit } from '@/types'
 import { CommitGroupBySprintCard } from '../releases/components/CommitGroupBySprintCard'
 import { CommitDetailModal } from '../releases/components/CommitDetailModal'
 import { SprintMetricsCard } from '../releases/components/SprintMetricsCard'
+import { BurndownChart } from '@/components/charts/BurndownChart'
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
@@ -45,6 +46,12 @@ export function SprintDetailPage() {
   const reportQuery = useQuery({
     queryKey: queryKeys.sprints.report(id ?? ''),
     queryFn: () => sprintsService.getReport(id!),
+    enabled: !!id,
+  })
+
+  const burndownQuery = useQuery({
+    queryKey: ['sprints', id, 'burndown'],
+    queryFn: () => sprintsService.getBurndown(id!),
     enabled: !!id,
   })
 
@@ -208,35 +215,56 @@ export function SprintDetailPage() {
                 <SprintMetricsCard sprint={sprint} report={report} />
 
                 <div className="grid gap-6 md:grid-cols-2">
-                  {/* Burndown Placeholder */}
+                  {/* Burndown Chart */}
                   <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
                     <CardHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
                       <CardTitle className="flex items-center justify-between text-base">
                         <div className="flex items-center gap-2">
                           <Activity className="h-5 w-5 text-indigo-500" />
-                          Burndown Chart
+                          Sprint Burndown
                         </div>
-                        <Badge variant="outline">Mock Data</Badge>
+                        {burndownQuery.data?.isOnTrack !== undefined && (
+                          <Badge
+                            variant={burndownQuery.data.isOnTrack ? 'success' : 'destructive'}
+                            className="text-xs"
+                          >
+                            {burndownQuery.data.isOnTrack ? 'On Track' : 'Behind Schedule'}
+                          </Badge>
+                        )}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-grow flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-900/20">
-                      <div className="w-full h-48 border-l-2 border-b-2 border-slate-300 dark:border-slate-700 relative mb-4">
-                        {/* Mock Ideal Line */}
-                        <div className="absolute top-0 left-0 right-0 bottom-0 overflow-hidden">
-                          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full stroke-slate-400 dark:stroke-slate-500" style={{ strokeWidth: 1, strokeDasharray: '4,4' }}>
-                            <line x1="0" y1="10" x2="100" y2="100" />
-                          </svg>
+                    <CardContent className="pt-4 flex-grow flex flex-col justify-between">
+                      {burndownQuery.isLoading ? (
+                        <div className="h-56 flex items-center justify-center text-sm text-slate-500">
+                          Loading burndown metrics...
                         </div>
-                        {/* Mock Actual Line */}
-                        <div className="absolute top-0 left-0 right-0 bottom-0 overflow-hidden">
-                          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full stroke-blue-500 fill-none" style={{ strokeWidth: 2 }}>
-                            <polyline points="0,10 20,20 40,25 60,60 80,65" />
-                          </svg>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-500 mt-2">
-                        Burndown chart visualization will be available once points are fully tracked.
-                      </p>
+                      ) : (
+                        <>
+                          <BurndownChart data={burndownQuery.data} height={220} />
+                          {burndownQuery.data && (
+                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center text-xs">
+                              <div>
+                                <span className="text-slate-400 block">Total Scope</span>
+                                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                  {burndownQuery.data.totalWork ?? 0} commits
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">Completed</span>
+                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                  {burndownQuery.data.completedWork ?? 0}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">Remaining</span>
+                                <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                                  {burndownQuery.data.remainingWork ?? 0}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </CardContent>
                   </Card>
 
