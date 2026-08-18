@@ -45,7 +45,14 @@ export function RepositoriesPage() {
     },
   })
 
-  const repositories = reposQuery.data ?? []
+  const rawRepos = reposQuery.data
+  const repositories: Repository[] = Array.isArray(rawRepos)
+    ? rawRepos
+    : (rawRepos && typeof rawRepos === 'object' && Array.isArray((rawRepos as any).data))
+    ? (rawRepos as any).data
+    : (rawRepos && typeof rawRepos === 'object' && Array.isArray((rawRepos as any).repositories))
+    ? (rawRepos as any).repositories
+    : []
 
   const filteredRepos = useMemo(() => {
     return repositories.filter((repo: Repository) => 

@@ -12,7 +12,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { reviewsService } from '@/services'
 import { queryKeys } from '@/lib/queryClient'
 import { PageHeader, MetricTile, QueryState } from '../pageUtils'
-import type { Review, ReviewState } from '@/types'
+import type { Review, ReviewState, ReviewActivityTrendPoint, ReviewLeaderboardEntry } from '@/types'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 
 export function ReviewsPage() {
@@ -60,8 +60,18 @@ export function ReviewsPage() {
   }, [allReviews, searchQuery])
 
   const analytics = analyticsQuery.data
-  const activityTrend = activityTrendQuery.data ?? []
-  const topReviewers = reviewersQuery.data ?? []
+  const rawActivityTrend = activityTrendQuery.data
+  const activityTrend: ReviewActivityTrendPoint[] = Array.isArray(rawActivityTrend)
+    ? rawActivityTrend
+    : (rawActivityTrend && typeof rawActivityTrend === 'object' && Array.isArray((rawActivityTrend as any).data))
+    ? (rawActivityTrend as any).data
+    : []
+  const rawTopReviewers = reviewersQuery.data
+  const topReviewers: ReviewLeaderboardEntry[] = Array.isArray(rawTopReviewers)
+    ? rawTopReviewers
+    : (rawTopReviewers && typeof rawTopReviewers === 'object' && Array.isArray((rawTopReviewers as any).data))
+    ? (rawTopReviewers as any).data
+    : []
 
   const getStatusBadge = (state: ReviewState) => {
     switch (state) {

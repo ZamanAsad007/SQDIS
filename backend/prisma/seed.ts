@@ -1,7 +1,13 @@
+import 'dotenv/config';
 import { PrismaClient, Role, CommitClassification, ReviewState, TurnaroundClass, CommentClass, SprintGoalStatus, SprintMetricType, DebtMarker, AlertType, AlertSeverity, AlertStatus } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL || 'postgresql://mahin:mahin273@localhost:5435/sqdis_db';
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Seeding database for SQDIS Viva / Demo Presentation...');

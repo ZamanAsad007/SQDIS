@@ -58,10 +58,17 @@ export function TeamsPage() {
     },
   })
 
-  const teams = teamsQuery.data ?? []
+  const rawTeams = teamsQuery.data
+  const teams: Team[] = Array.isArray(rawTeams)
+    ? rawTeams
+    : (rawTeams && typeof rawTeams === 'object' && Array.isArray((rawTeams as any).data))
+    ? (rawTeams as any).data
+    : (rawTeams && typeof rawTeams === 'object' && Array.isArray((rawTeams as any).teams))
+    ? (rawTeams as any).teams
+    : []
   
   const filteredAndSortedTeams = useMemo(() => {
-    let result = teamsQuery.data ?? []
+    let result = [...teams]
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       result = result.filter(t => 

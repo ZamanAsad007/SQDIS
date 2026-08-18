@@ -61,8 +61,22 @@ export function SprintsPage() {
     },
   })
 
-  const sprints = sprintsQuery.data ?? []
-  const teams = teamsQuery.data ?? []
+  const rawSprints = sprintsQuery.data
+  const sprints: Sprint[] = Array.isArray(rawSprints)
+    ? rawSprints
+    : (rawSprints && typeof rawSprints === 'object' && Array.isArray((rawSprints as any).data))
+    ? (rawSprints as any).data
+    : (rawSprints && typeof rawSprints === 'object' && Array.isArray((rawSprints as any).sprints))
+    ? (rawSprints as any).sprints
+    : []
+  const rawTeams = teamsQuery.data
+  const teams: Team[] = Array.isArray(rawTeams)
+    ? rawTeams
+    : (rawTeams && typeof rawTeams === 'object' && Array.isArray((rawTeams as any).data))
+    ? (rawTeams as any).data
+    : (rawTeams && typeof rawTeams === 'object' && Array.isArray((rawTeams as any).teams))
+    ? (rawTeams as any).teams
+    : []
   
   // Metrics
   const activeSprints = sprints.filter((s) => s.status === 'ACTIVE').length

@@ -660,6 +660,7 @@ export interface Commit {
 export interface CommitFilters {
   page?: number;
   pageSize?: number;
+  limit?: number;
   organizationId?: string;
   repositoryId?: string;
   authorId?: string;

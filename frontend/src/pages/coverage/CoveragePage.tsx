@@ -15,7 +15,8 @@ export function CoveragePage() {
     queryFn: () => coverageService.getAll({ page: 1, limit: 50 }),
   })
 
-  const reports = coverageQuery.data?.reports ?? []
+  const rawCoverage = coverageQuery.data
+  const reports = Array.isArray(rawCoverage) ? rawCoverage : (rawCoverage?.reports ?? [])
   const completed = reports.filter((report) => report.status === 'COMPLETED')
   const averageCoverage =
     completed.length > 0

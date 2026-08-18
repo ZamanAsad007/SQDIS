@@ -77,7 +77,14 @@ export function MembersPage() {
   })
 
   // Derived state
-  const members = membersQuery.data ?? []
+  const rawMembers = membersQuery.data
+  const members: OrganizationMember[] = Array.isArray(rawMembers)
+    ? rawMembers
+    : (rawMembers && typeof rawMembers === 'object' && Array.isArray((rawMembers as any).data))
+    ? (rawMembers as any).data
+    : (rawMembers && typeof rawMembers === 'object' && Array.isArray((rawMembers as any).members))
+    ? (rawMembers as any).members
+    : []
   
   const stats = useMemo(() => {
     return members.reduce((acc, member) => {

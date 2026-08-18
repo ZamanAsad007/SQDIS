@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "127.0.0.1:5435:5432"
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +26,7 @@ services:
     container_name: sqdis-redis
     restart: always
     ports:
-      - "127.0.0.1:6389:6379"
+      - "6389:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -44,7 +44,7 @@ services:
     container_name: sqdis-ml-service
     restart: always
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     environment:
       - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:80
     env_file:
@@ -59,7 +59,7 @@ services:
     container_name: sqdis-backend
     restart: always
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     env_file:
       - .env
     environment:
@@ -84,7 +84,7 @@ services:
     container_name: sqdis-frontend
     restart: always
     ports:
-      - "127.0.0.1:5173:80"
+      - "5173:80"
     depends_on:
       - backend
     networks:
@@ -104,7 +104,7 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
     ports:
-      - "127.0.0.1:9090:9090"
+      - "9090:9090"
     depends_on:
       - backend
       - ml-service
@@ -124,7 +124,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
     ports:
-      - "127.0.0.1:3001:3000"
+      - "3001:3000"
     depends_on:
       - prometheus
     networks:
@@ -139,7 +139,7 @@ services:
       - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml
     ports:
-      - "127.0.0.1:3100:3100"
+      - "3100:3100"
     networks:
       - sqdis-network
 
@@ -168,9 +168,9 @@ services:
     command:
       - '--config.file=/etc/tempo.yaml'
     ports:
-      - "127.0.0.1:3200:3200"
-      - "127.0.0.1:4317:4317"
-      - "127.0.0.1:4318:4318"
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
     networks:
       - sqdis-network
 
@@ -189,7 +189,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     ports:
-      - "127.0.0.1:9100:9100"
+      - "9100:9100"
     networks:
       - sqdis-network
 
@@ -205,7 +205,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
     networks:
       - sqdis-network
 

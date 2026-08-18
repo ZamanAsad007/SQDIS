@@ -36,7 +36,14 @@ export function ReleasesPage() {
     },
   })
 
-  const releases = releasesQuery.data ?? []
+  const rawReleases = releasesQuery.data
+  const releases: Release[] = Array.isArray(rawReleases)
+    ? rawReleases
+    : (rawReleases && typeof rawReleases === 'object' && Array.isArray((rawReleases as any).data))
+    ? (rawReleases as any).data
+    : (rawReleases && typeof rawReleases === 'object' && Array.isArray((rawReleases as any).releases))
+    ? (rawReleases as any).releases
+    : []
   const releasedCount = releases.filter((r) => r.status === 'RELEASED').length
   const pendingCount = releases.filter((r) => r.status === 'DRAFT' || r.status === 'PLANNED' || r.status === 'IN_PROGRESS' || r.status === 'READY').length
 

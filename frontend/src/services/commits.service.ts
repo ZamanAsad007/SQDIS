@@ -6,8 +6,18 @@ export const commitsService = {
    * Get all commits with pagination and filters
    */
   async getAll(filters?: CommitFilters): Promise<Commit[]> {
-    const response = await api.get<Commit[]>('/commits', { params: filters });
-    return response.data;
+    const params = filters
+      ? { ...filters, limit: filters.limit ?? filters.pageSize ?? 20 }
+      : undefined;
+    const response = await api.get<any>('/commits', { params });
+    const raw = response.data;
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object') {
+      if (Array.isArray(raw.data)) return raw.data;
+      if (Array.isArray(raw.commits)) return raw.commits;
+      if (Array.isArray(raw.items)) return raw.items;
+    }
+    return [];
   },
 
   /**

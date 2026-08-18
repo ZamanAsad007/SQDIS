@@ -56,7 +56,14 @@ export function UnmappedEmailsPage() {
   })
 
   const unmappedEmails = Array.isArray(unmappedEmailsQuery.data) ? unmappedEmailsQuery.data : []
-  const members = membersQuery.data ?? []
+  const rawMembers = membersQuery.data
+  const members = Array.isArray(rawMembers)
+    ? rawMembers
+    : (rawMembers && typeof rawMembers === 'object' && Array.isArray((rawMembers as any).data))
+    ? (rawMembers as any).data
+    : (rawMembers && typeof rawMembers === 'object' && Array.isArray((rawMembers as any).members))
+    ? (rawMembers as any).members
+    : []
 
   const filteredEmails = useMemo(() => {
     return unmappedEmails.filter(item => 

@@ -21,8 +21,24 @@ import {
   FiUsers,
 } from 'react-icons/fi'
 
-function sumCounts<T extends { count: number }>(items: T[] | null | undefined) {
-  return items?.reduce((total, item) => total + item.count, 0) ?? 0
+function sumCounts(items: unknown): number {
+  if (Array.isArray(items)) {
+    return items.reduce((total, item) => {
+      if (typeof item === 'number') return total + item
+      if (item && typeof item === 'object') {
+        if ('count' in item && typeof item.count === 'number') return total + item.count
+        if ('actionCount' in item && typeof item.actionCount === 'number') return total + item.actionCount
+        if ('failedAttempts' in item && typeof item.failedAttempts === 'number') return total + item.failedAttempts
+      }
+      return total
+    }, 0)
+  }
+  if (items && typeof items === 'object') {
+    return Object.values(items as Record<string, unknown>).reduce<number>((total, val) => {
+      return total + (typeof val === 'number' ? val : 0)
+    }, 0)
+  }
+  return 0
 }
 
 export default function Dashboard() {
