@@ -62,13 +62,14 @@ export function InvitationsPage() {
   })
 
   const resendMutation = useMutation({
-    mutationFn: (_id: string) => {
+    mutationFn: (invitationId: string) => {
       if (!currentOrganization) throw new Error('No organization')
-      // Mocking resend service call if not available
-      return Promise.resolve({ success: true })
+      const target = invitations.find((i: Invitation) => i.id === invitationId)
+      if (!target) throw new Error('Invitation not found')
+      return organizationService.resendInvitation(currentOrganization.id, { email: target.email, role: target.role })
     },
     onSuccess: () => {
-      // Show success toast here if implemented
+      queryClient.invalidateQueries({ queryKey: queryKeys.organizations.invitations })
     },
   })
 

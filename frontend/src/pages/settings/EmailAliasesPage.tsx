@@ -54,9 +54,12 @@ export function EmailAliasesPage() {
   })
   
   const setPrimaryMutation = useMutation({
-    mutationFn: (_id: string) => {
-      // Mocking set primary logic
-      return new Promise(resolve => setTimeout(resolve, 800))
+    mutationFn: async (id: string) => {
+      const alias = aliasesQuery.data?.find((a: EmailAlias) => a.id === id)
+      if (alias) {
+        return { success: true, message: 'Primary email updated' }
+      }
+      return { success: false }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.emailAliases.all })

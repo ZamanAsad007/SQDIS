@@ -100,6 +100,16 @@ export interface OAuthCallbackParams {
   user: string;
 }
 
+export interface UpdateProfileRequest {
+  name?: string;
+  avatarUrl?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // ============== ORGANIZATION ==============
 
 export interface Organization {

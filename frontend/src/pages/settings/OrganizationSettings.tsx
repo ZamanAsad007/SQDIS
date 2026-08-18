@@ -44,9 +44,7 @@ export function OrganizationSettings() {
   const deleteMutation = useMutation({
     mutationFn: () => {
       if (!currentOrganization) throw new Error('No organization')
-      // Mocking delete as it might not be in service yet
-      // return organizationService.delete(currentOrganization.id)
-      return new Promise(resolve => setTimeout(resolve, 1000))
+      return organizationService.delete(currentOrganization.id)
     },
     onSuccess: () => {
       // Redirect or handle post-delete
@@ -153,7 +151,7 @@ export function OrganizationSettings() {
           <CardFooter className="bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 py-4 flex justify-between">
             <p className="text-sm text-slate-500">
               <Clock className="inline-block h-4 w-4 mr-1 pb-0.5" />
-              Created on {new Date(currentOrganization.createdAt || Date.now()).toLocaleDateString()}
+              Created on {currentOrganization.createdAt ? new Date(currentOrganization.createdAt).toLocaleDateString() : 'N/A'}
             </p>
             <Button type="submit" isLoading={updateMutation.isPending} className="gap-2">
               <Save className="h-4 w-4" /> Save Changes

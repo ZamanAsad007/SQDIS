@@ -33,8 +33,8 @@ export function ProfileSettings() {
 
   // Mutations
   const updateProfileMutation = useMutation({
-    mutationFn: async (_data: { name: string }) => {
-      return authService.getMe()
+    mutationFn: async (data: { name: string }) => {
+      return authService.updateProfile(data)
     },
     onSuccess: (updatedUser) => {
       if (updatedUser) {
@@ -45,13 +45,16 @@ export function ProfileSettings() {
   })
 
   const updatePasswordMutation = useMutation({
-    mutationFn: (_data: any) => {
-      // Mocking password update service
-      return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 1000))
+    mutationFn: (data: { currentPassword: string; newPassword: string }) => {
+      return authService.changePassword(data)
     },
     onSuccess: () => {
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setPasswordError('')
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) => {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to update password'
+      setPasswordError(msg)
     },
   })
 
