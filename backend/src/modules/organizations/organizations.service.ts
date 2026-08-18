@@ -365,6 +365,46 @@ export class OrganizationsService {
   }
 
   /**
+   * Get all pending invitations for an organization
+   */
+  async getInvitations(organizationId: string): Promise<InvitationResponse[]> {
+    const invitations = await this.prisma.invitation.findMany({
+      where: {
+        organizationId,
+        acceptedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return invitations.map((invitation) => ({
+      id: invitation.id,
+      email: invitation.email,
+      token: invitation.token,
+      expiresAt: invitation.expiresAt,
+      createdAt: invitation.createdAt,
+      acceptedAt: invitation.acceptedAt,
+      organizationId: invitation.organizationId,
+    }));
+  }
+
+  /**
+   * Revoke an invitation
+   */
+  async revokeInvitation(organizationId: string, invitationId: string): Promise<void> {
+    const invitation = await this.prisma.invitation.findFirst({
+      where: { id: invitationId, organizationId },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    await this.prisma.invitation.delete({
+      where: { id: invitationId },
+    });
+  }
+
+  /**
    * Accept invitation and add user to organization
    */
   async acceptInvitation(token: string, userId: string): Promise<OrganizationMemberResponse> {

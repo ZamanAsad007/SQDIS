@@ -14,8 +14,15 @@ export const membersService = {
    * Get all invitations for the organization
    */
   async getInvitations(): Promise<Invitation[]> {
-    const response = await api.get<Invitation[]>('/organizations/invitations');
-    return response.data;
+    try {
+      const response = await api.get<Invitation[]>('/organizations/invitations');
+      return response.data || [];
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        return [];
+      }
+      throw err;
+    }
   },
 
   /**

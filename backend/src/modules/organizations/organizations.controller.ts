@@ -174,6 +174,60 @@ export class OrganizationsController {
   }
 
   /**
+   * Get invitations for current active organization context
+   */
+  @Get('invitations')
+  @ApiOperation({ summary: 'Get invitations for current active organization' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of invitations',
+  })
+  async getInvitationsForCurrentOrg(
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser('id') userId: string,
+  ) {
+    let orgId = organizationId;
+    if (!orgId) {
+      const userOrgs = await this.organizationsService.findAllForUser(userId);
+      if (userOrgs.length > 0) {
+        orgId = userOrgs[0].id;
+      }
+    }
+    if (!orgId) {
+      throw new ForbiddenException('Organization context required.');
+    }
+    await this.organizationsService.verifyUserRole(orgId, userId, [Role.OWNER, Role.ADMIN]);
+    return this.organizationsService.getInvitations(orgId);
+  }
+
+  /**
+   * Revoke an invitation in current active organization context
+   */
+  @Delete('invitations/:invitationId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.OWNER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Revoke an invitation' })
+  async revokeInvitationForCurrentOrg(
+    @Param('invitationId') invitationId: string,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser('id') userId: string,
+  ) {
+    let orgId = organizationId;
+    if (!orgId) {
+      const userOrgs = await this.organizationsService.findAllForUser(userId);
+      if (userOrgs.length > 0) {
+        orgId = userOrgs[0].id;
+      }
+    }
+    if (!orgId) {
+      throw new ForbiddenException('Organization context required.');
+    }
+    await this.organizationsService.verifyUserRole(orgId, userId, [Role.OWNER, Role.ADMIN]);
+    await this.organizationsService.revokeInvitation(orgId, invitationId);
+  }
+
+  /**
    * Get organization by ID
    */
   @Get(':id')
@@ -348,6 +402,48 @@ export class OrganizationsController {
     await this.organizationsService.verifyUserRole(id, userId, [Role.OWNER, Role.ADMIN]);
 
     return this.organizationsService.createInvitation(id, dto.email);
+  }
+
+  /**
+   * Get all invitations for an organization
+   */
+  @Get(':id/invitations')
+  @ApiOperation({ summary: 'Get all invitations for an organization' })
+  @ApiParam({ name: 'id', description: 'Organization ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of organization invitations',
+  })
+  async getInvitations(@Param('id') id: string, @GetUser('id') userId: string) {
+    // Only OWNER and ADMIN can view invitations
+    await this.organizationsService.verifyUserRole(id, userId, [Role.OWNER, Role.ADMIN]);
+    return this.organizationsService.getInvitations(id);
+  }
+
+  /**
+   * Revoke an invitation
+   */
+  @Delete(':id/invitations/:invitationId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.OWNER)
+  @AuditLog({
+    action: 'DELETE',
+    resourceType: 'OrganizationInvitation',
+    resourceIdParam: 'invitationId',
+    captureSnapshot: true,
+    includeResponseBody: true,
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Revoke an invitation' })
+  @ApiParam({ name: 'id', description: 'Organization ID' })
+  @ApiParam({ name: 'invitationId', description: 'Invitation ID' })
+  async revokeInvitation(
+    @Param('id') id: string,
+    @Param('invitationId') invitationId: string,
+    @GetUser('id') userId: string,
+  ) {
+    await this.organizationsService.verifyUserRole(id, userId, [Role.OWNER, Role.ADMIN]);
+    await this.organizationsService.revokeInvitation(id, invitationId);
   }
 
   /**

@@ -53,8 +53,15 @@ export const organizationService = {
    * Get all invitations for the organization
    */
   async getInvitations(id: string): Promise<Invitation[]> {
-    const response = await api.get<Invitation[]>(`/organizations/${id}/invitations`);
-    return response.data;
+    try {
+      const response = await api.get<Invitation[]>(`/organizations/${id}/invitations`);
+      return response.data || [];
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        return [];
+      }
+      throw err;
+    }
   },
 
   /**
