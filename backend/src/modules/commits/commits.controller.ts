@@ -4,6 +4,7 @@ import { CommitsService } from './commits.service';
 import { CommitFiltersDto, CommitStatsQueryDto, HeatmapQueryDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { GetOrganization } from '../auth/decorators/get-organization.decorator';
 import type { RequestUser } from '../auth/decorators/get-user.decorator';
 import { PrismaService } from '../../prisma';
 
@@ -33,11 +34,26 @@ export class CommitsController {
     status: 403,
     description: 'User does not have access to the requested organization',
   })
-  async findAll(@Query() filters: CommitFiltersDto, @GetUser() user: RequestUser) {
-    // Verify user has access to the organization
-    if (filters.organizationId) {
-      await this.verifyOrganizationAccess(filters.organizationId, user.id);
+  async findAll(
+    @Query() filters: CommitFiltersDto,
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const organizationId = filters.organizationId || orgId || (user as any)?.organizationId;
+
+    if (!organizationId) {
+      return {
+        data: [],
+        total: 0,
+        page: filters.page || 1,
+        limit: filters.pageSize || filters.limit || 20,
+        totalPages: 0,
+      };
     }
+
+    // Verify user has access to the organization
+    await this.verifyOrganizationAccess(organizationId, user.id);
+    filters.organizationId = organizationId;
 
     // If repositoryId is provided, verify access through repository's organization
     if (filters.repositoryId) {
@@ -66,11 +82,28 @@ export class CommitsController {
     status: 403,
     description: 'User does not have access to the requested organization',
   })
-  async getStats(@Query() query: CommitStatsQueryDto, @GetUser() user: RequestUser) {
-    // Verify user has access to the organization
-    if (query.organizationId) {
-      await this.verifyOrganizationAccess(query.organizationId, user.id);
+  async getStats(
+    @Query() query: CommitStatsQueryDto,
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const organizationId = query.organizationId || orgId || (user as any)?.organizationId;
+
+    if (!organizationId) {
+      return {
+        totalCommits: 0,
+        totalInsertions: 0,
+        totalDeletions: 0,
+        averageChurnRatio: 0,
+        anomalyCount: 0,
+        classifications: {},
+        topAuthors: [],
+      };
     }
+
+    // Verify user has access to the organization
+    await this.verifyOrganizationAccess(organizationId, user.id);
+    query.organizationId = organizationId;
 
     // If repositoryId is provided, verify access through repository's organization
     if (query.repositoryId) {

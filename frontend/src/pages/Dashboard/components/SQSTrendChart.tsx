@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { FiTrendingUp } from 'react-icons/fi'
 import {
   CartesianGrid,
@@ -10,39 +11,20 @@ import {
   YAxis,
 } from 'recharts'
 import MetricChart from './MetricChart'
-
-type Point = {
-  day: string
-  value: number
-}
-
-function clamp(n: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, n))
-}
-
-function makeTrendData(days: number): Point[] {
-  const points: Point[] = []
-  let v = 62
-
-  for (let i = 1; i <= days; i++) {
-    const wave = Math.sin(i / 6) * 2
-    const drift = (i / days) * 18
-    const noise = (i % 5 === 0 ? -1.5 : 1.1)
-    v = clamp(v + wave + drift / days + noise * 0.25, 40, 92)
-
-    points.push({
-      day: `Day ${i}`,
-      value: Number(v.toFixed(1)),
-    })
-  }
-
-  return points
-}
+import { dashboardService } from '@/services'
 
 export default function SQSTrendChart() {
   const [days, setDays] = useState(30)
 
-  const data = useMemo(() => makeTrendData(days), [days])
+  const { data: trendData = [], isLoading } = useQuery({
+    queryKey: ['dashboard', 'sqs-trend', days],
+    queryFn: () => dashboardService.getSQSTrend(days),
+  })
+
+  const chartData = trendData.map((item) => ({
+    date: item.date.slice(5),
+    value: item.value,
+  }))
 
   return (
     <MetricChart
@@ -56,36 +38,46 @@ export default function SQSTrendChart() {
       selectedRange={days}
       onRangeChange={setDays}
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ left: 4, right: 10, top: 8, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="day"
-            tick={{ fontSize: 12 }}
-            interval={Math.ceil(days / 6)}
-          />
-          <YAxis
-            domain={[0, 100]}
-            tick={{ fontSize: 12 }}
-            width={36}
-          />
-          <Tooltip
-            formatter={(value) => {
-              const v = typeof value === 'number' ? value.toFixed(1) : String(value)
-              return [v, 'Avg SQS']
-            }}
-            labelFormatter={(label) => label}
-          />
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke="#111827"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {isLoading ? (
+        <div className="flex h-full items-center justify-center text-sm text-slate-500">
+          Loading SQS trend...
+        </div>
+      ) : chartData.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center gap-1 text-center text-sm text-slate-500">
+          <p className="font-semibold text-slate-700 dark:text-slate-300">No SQS scores calculated yet</p>
+          <p className="text-xs text-slate-400">Quality scores are generated automatically as projects and commits are analyzed.</p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ left: 4, right: 10, top: 8, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 11 }}
+            />
+            <YAxis
+              domain={[0, 100]}
+              tick={{ fontSize: 11 }}
+              width={36}
+            />
+            <Tooltip
+              formatter={(value) => {
+                const v = typeof value === 'number' ? value.toFixed(1) : String(value)
+                return [v, 'Avg SQS']
+              }}
+              contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '8px', border: 'none', color: '#fff' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#6366f1"
+              strokeWidth={2.5}
+              dot={{ r: 3, fill: '#6366f1' }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </MetricChart>
   )
 }

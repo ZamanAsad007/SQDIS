@@ -36,21 +36,21 @@ import { Avatar } from '@/components/ui/avatar'
 const MAIN_NAV_LABELS = [
   'Dashboard',
   'Quality Scores',
+  'Projects',
+  'Teams',
   'Developers',
   'Leaderboard',
   'Commits',
   'Coverage',
   'Reviews',
-  'Teams',
-  'Projects',
   'Sprints',
   'Releases',
   'Goals',
+  'Tech Debt',
+  'Alerts',
 ]
 
 const SECONDARY_NAV_LABELS = [
-  'Alerts',
-  'Tech Debt',
   'Reports',
   'Organization Members',
   'Onboarding',

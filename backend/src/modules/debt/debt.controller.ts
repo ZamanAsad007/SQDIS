@@ -1,4 +1,3 @@
- 
 import {
   Controller,
   Get,
@@ -11,7 +10,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery }
 import { DebtService } from './debt.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../auth/guards/organization.guard';
-import { GetUser } from '../auth/decorators/get-user.decorator';
+import { GetOrganization } from '../auth/decorators/get-organization.decorator';
 import { DebtFiltersDto } from './dto';
 
 /**
@@ -33,9 +32,12 @@ export class DebtController {
   @ApiResponse({ status: 200, description: 'Paginated list of debt items' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findAll(
-    @GetUser('organizationId') organizationId: string,
+    @GetOrganization() organizationId: string,
     @Query() filters: DebtFiltersDto,
   ) {
+    if (!organizationId) {
+      return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+    }
     return await this.debtService.findAll(organizationId, filters);
   }
 
@@ -49,9 +51,10 @@ export class DebtController {
   @ApiResponse({ status: 200, description: 'List of hot spot files ranked by severity' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getHotSpots(
-    @GetUser('organizationId') organizationId: string,
+    @GetOrganization() organizationId: string,
     @Query('repositoryId') repositoryId?: string,
   ) {
+    if (!organizationId) return [];
     return await this.debtService.getHotSpots(organizationId, repositoryId);
   }
 
@@ -67,11 +70,12 @@ export class DebtController {
   @ApiResponse({ status: 200, description: 'Debt trend data with velocity and accumulation status' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getTrends(
-    @GetUser('organizationId') organizationId: string,
+    @GetOrganization() organizationId: string,
     @Query('days') days?: number,
     @Query('repositoryId') repositoryId?: string,
     @Query('teamId') teamId?: string,
   ) {
+    if (!organizationId) return { trends: [], velocity: 0, status: 'STABLE' };
     return await this.debtService.getTrends(organizationId, days || 30, repositoryId, teamId);
   }
 
@@ -86,10 +90,11 @@ export class DebtController {
   @ApiResponse({ status: 200, description: 'Prioritized list of debt remediation recommendations' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getRecommendations(
-    @GetUser('organizationId') organizationId: string,
+    @GetOrganization() organizationId: string,
     @Query('repositoryId') repositoryId?: string,
     @Query('limit') limit?: number,
   ) {
+    if (!organizationId) return [];
     return await this.debtService.getRecommendations(organizationId, repositoryId, limit || 10);
   }
 
@@ -101,7 +106,8 @@ export class DebtController {
   @ApiOperation({ summary: 'Get debt attribution by developer' })
   @ApiResponse({ status: 200, description: 'Debt introduced and resolved per developer' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getAttribution(@GetUser('organizationId') organizationId: string) {
+  async getAttribution(@GetOrganization() organizationId: string) {
+    if (!organizationId) return [];
     return await this.debtService.getAttribution(organizationId);
   }
 
@@ -116,10 +122,11 @@ export class DebtController {
   @ApiResponse({ status: 200, description: 'Debt scores per module with marker breakdowns' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getModuleScores(
-    @GetUser('organizationId') organizationId: string,
+    @GetOrganization() organizationId: string,
     @Query('repositoryId') repositoryId?: string,
     @Query('threshold') threshold?: number,
   ) {
+    if (!organizationId) return [];
     return await this.debtService.getModuleDebtScore(
       organizationId,
       repositoryId,

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { Github, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,6 +7,10 @@ import { useRegisterMutation } from '@/hooks/useAuthMutations'
 
 export default function SignUp() {
   const register = useRegisterMutation()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const urlError = searchParams.get('error') || (location.state as any)?.error
+
   const backendBaseUrl = useMemo(
     () => import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
     []
@@ -59,6 +63,14 @@ export default function SignUp() {
           GitHub
         </Button>
       </div>
+
+      {urlError && (
+        <div className="rounded-md bg-rose-50 dark:bg-rose-950/50 p-3 border border-rose-200 dark:border-rose-800">
+          <p className="text-xs font-medium text-rose-700 dark:text-rose-300">
+            {urlError}
+          </p>
+        </div>
+      )}
 
       <form className="space-y-4" onSubmit={onSubmit}>
         <Input label="Full name" value={name} onChange={(event) => setName(event.target.value)} required />

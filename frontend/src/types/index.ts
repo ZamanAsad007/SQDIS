@@ -174,12 +174,17 @@ export interface DashboardStats {
   totalDevelopers: number;
   totalTeams: number;
   totalRepositories: number;
+  totalProjects?: number;
   totalCommits: number;
-  avgSqs: number;
-  avgDqs: number;
-  activeAlerts: number;
-  coverage: number;
-  techDebt: number;
+  bugFixCommits?: number;
+  avgSqs?: number;
+  avgSQS?: number;
+  avgDqs?: number;
+  activeAlerts?: number;
+  riskyModulesCount?: number;
+  coverage?: number;
+  avgCoverage?: number;
+  techDebt?: number;
 }
 
 export interface TrendDataPoint {
@@ -189,21 +194,24 @@ export interface TrendDataPoint {
 
 export interface SqsTrendPoint {
   date: string;
-  avgSqs: number;
+  avgSqs?: number;
+  value?: number;
 }
 
 export interface CommitTrendPoint {
   date: string;
-  count: number;
+  count?: number;
+  value?: number;
 }
 
 export interface TopRepository {
   id: string;
   name: string;
-  fullName: string;
+  fullName?: string;
   sqs: number;
+  coverage?: number;
   commitCount: number;
-  lastActivity: string;
+  lastActivity?: string;
 }
 
 export interface TopDeveloper {
@@ -212,7 +220,9 @@ export interface TopDeveloper {
   email: string;
   avatarUrl?: string;
   dqs: number;
-  trend: number;
+  commitCount?: number;
+  teamName?: string;
+  trend?: number;
 }
 
 export interface TopTeam {
@@ -224,9 +234,11 @@ export interface TopTeam {
 
 export interface RecentActivity {
   id: string;
-  type: 'commit' | 'review' | 'alert' | 'deployment' | 'team_change';
+  type: string;
+  title?: string;
   description: string;
   repositoryName?: string;
+  author?: string;
   user?: {
     id: string;
     name: string;
