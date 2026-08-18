@@ -1,9 +1,7 @@
 import { useEffect, useMemo } from 'react'
-import { dashboardStyles } from './Dashboard.styles'
+import { PageHeader } from '../pageUtils'
 import { useApi } from '../../hooks/useApi'
 import { authApi, auditLogsApi } from '../../services'
-import DashboardNavbar from './components/DashboardNavbar'
-import DashboardSidebar from './components/DashboardSidebar'
 import MetricCard from './components/MetricCard'
 import CommitActivityChart from './components/CommitActivityChart'
 import SQSTrendChart from './components/SQSTrendChart'
@@ -72,20 +70,6 @@ export default function Dashboard() {
     ])
   }, [currentOrgId, loadActionCounts, loadActiveUsers, loadAuditLogs, loadCriticalLogs, loadFailedPermissions, loadHighLogs])
 
-  const handleSelectOrganization = async (orgId: string) => {
-    await authApi.switchOrganization(orgId)
-    void loadProfile()
-    void loadOrganizations()
-  }
-
-  const dashboardUser = useMemo(
-    () => ({
-      name: profile?.name ?? 'Signed-in user',
-      email: profile?.email ?? 'Connected account',
-    }),
-    [profile],
-  )
-
   const metrics = useMemo(
     () => ({
       organizations: organizations.length,
@@ -99,96 +83,76 @@ export default function Dashboard() {
   )
 
   return (
-    <div className={dashboardStyles.shell}>
-      <DashboardSidebar />
+    <div className="space-y-6">
+      <PageHeader
+        title="Dashboard"
+        description="Organization-wide software quality overview, engineering metrics, and repository health."
+      />
 
-      <div className={dashboardStyles.content}>
-        <DashboardNavbar
-          notificationCount={metrics.criticalEvents}
-          user={dashboardUser}
-          organizations={organizations}
-          currentOrganizationId={currentOrgId}
-          onSelectOrganization={handleSelectOrganization}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MetricCard
+          title="Organizations"
+          icon={<FiBriefcase />}
+          value={metrics.organizations.toString()}
+          trend={{ direction: 'up', label: 'Connected from auth API' }}
         />
+        <MetricCard
+          title="Active Users"
+          icon={<FiUsers />}
+          value={metrics.activeUsers.toString()}
+          trend={{ direction: 'up', label: 'From audit analytics' }}
+        />
+        <MetricCard
+          title="Audit Events"
+          icon={<FiBarChart2 />}
+          value={metrics.auditEvents.toString()}
+          trend={{ direction: 'up', label: 'Current organization total' }}
+        />
+        <MetricCard
+          title="Critical Events"
+          icon={<FiCrosshair />}
+          value={metrics.criticalEvents.toString()}
+          trend={{ direction: 'down', label: 'HIGH + CRITICAL logs' }}
+        />
+        <MetricCard
+          title="Failed Permissions"
+          icon={<FiCode />}
+          value={metrics.failedPermissions.toString()}
+          trend={{ direction: 'up', label: 'Audit analytics total' }}
+        />
+        <MetricCard
+          title="Action Volume"
+          icon={<FiAlertTriangle />}
+          value={metrics.actionVolume.toString()}
+          secondary="From audit action counts"
+        />
+      </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <main className={dashboardStyles.page}>
-            <header className={dashboardStyles.header}>
-              <h1 className={dashboardStyles.title}>Dashboard</h1>
-              <p className={dashboardStyles.subtitle}>
-                Organization-wide software quality overview
-              </p>
-            </header>
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-6">
+          <SQSTrendChart />
+        </div>
+        <div className="lg:col-span-6">
+          <CommitActivityChart />
+        </div>
+        <div className="lg:col-span-12">
+          <TeamPerformanceChart />
+        </div>
 
-            <section className={dashboardStyles.grid}>
-              <div className="lg:col-span-12">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <MetricCard
-                    title="Organizations"
-                    icon={<FiBriefcase />}
-                    value={metrics.organizations.toString()}
-                    trend={{ direction: 'up', label: 'Connected from auth API' }}
-                  />
-                  <MetricCard
-                    title="Active Users"
-                    icon={<FiUsers />}
-                    value={metrics.activeUsers.toString()}
-                    trend={{ direction: 'up', label: 'From audit analytics' }}
-                  />
-                  <MetricCard
-                    title="Audit Events"
-                    icon={<FiBarChart2 />}
-                    value={metrics.auditEvents.toString()}
-                    trend={{ direction: 'up', label: 'Current organization total' }}
-                  />
-                  <MetricCard
-                    title="Critical Events"
-                    icon={<FiCrosshair />}
-                    value={metrics.criticalEvents.toString()}
-                    trend={{ direction: 'down', label: 'HIGH + CRITICAL logs' }}
-                  />
-                  <MetricCard
-                    title="Failed Permissions"
-                    icon={<FiCode />}
-                    value={metrics.failedPermissions.toString()}
-                    trend={{ direction: 'up', label: 'Audit analytics total' }}
-                  />
-                  <MetricCard
-                    title="Action Volume"
-                    icon={<FiAlertTriangle />}
-                    value={metrics.actionVolume.toString()}
-                    secondary="From audit action counts"
-                  />
-                </div>
-              </div>
+        <div className="lg:col-span-12">
+          <RepositoriesTable />
+        </div>
 
-              <div className="lg:col-span-6">
-                <SQSTrendChart />
-              </div>
-              <div className="lg:col-span-6">
-                <CommitActivityChart />
-              </div>
-              <div className="lg:col-span-12">
-                <TeamPerformanceChart />
-              </div>
+        <div className="lg:col-span-12">
+          <RepositoriesNeedingAttentionTable />
+        </div>
 
-              <div className="lg:col-span-12">
-                <RepositoriesTable />
-              </div>
+        <div className="lg:col-span-12">
+          <DevelopersTable />
+        </div>
 
-              <div className="lg:col-span-12">
-                <RepositoriesNeedingAttentionTable />
-              </div>
-
-              <div className="lg:col-span-12">
-                <DevelopersTable />
-              </div>
-
-              <div className="lg:col-span-12">
-                <ActivityFeed />
-              </div>
-            </section>
-          </main>
+        <div className="lg:col-span-12">
+          <ActivityFeed />
         </div>
       </div>
     </div>

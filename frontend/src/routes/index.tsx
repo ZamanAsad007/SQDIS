@@ -43,6 +43,7 @@ const AuditAnalyticsPage = lazy(() => import('@/pages/audit').then((m) => ({ def
 const RealTimeAuditMonitorPage = lazy(() => import('@/pages/audit').then((m) => ({ default: m.RealTimeAuditMonitorPage })))
 const EmailVerificationPage = lazy(() => import('@/pages/auth/EmailVerificationPage').then((m) => ({ default: m.EmailVerificationPage })))
 const ScoresPage = lazy(() => import('@/pages/scores/ScoresPage').then((m) => ({ default: m.ScoresPage })))
+const OrgMembersPage = lazy(() => import('@/pages/members/OrgMembersPage').then((m) => ({ default: m.OrgMembersPage })))
 
 const ForbiddenPage = lazy(() => import('@/pages/ForbiddenPage').then((m) => ({ default: m.ForbiddenPage })))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
@@ -120,6 +121,25 @@ export const routes: RouteObject[] = [
           { path: '/audit-logs', element: <AuditLogsPage /> },
           { path: '/audit-logs/analytics', element: <AuditAnalyticsPage /> },
           { path: '/audit-logs/monitor', element: <RealTimeAuditMonitorPage /> },
+          { path: '/members', element: <OrgMembersPage /> },
+          { path: '/organization/members', element: <OrgMembersPage /> },
+          { path: '/dashboard/org-members', element: <OrgMembersPage /> },
+          // Dashboard route redirects/aliases
+          { path: '/dashboard/teams', element: <Navigate to="/teams" replace /> },
+          { path: '/dashboard/onboarding', element: <Navigate to="/onboarding" replace /> },
+          { path: '/dashboard/repositories', element: <Navigate to="/settings/repositories" replace /> },
+          { path: '/dashboard/projects', element: <Navigate to="/projects" replace /> },
+          { path: '/dashboard/quality/dqs', element: <Navigate to="/scores" replace /> },
+          { path: '/dashboard/quality/sqs', element: <Navigate to="/scores" replace /> },
+          { path: '/dashboard/quality/coverage', element: <Navigate to="/coverage" replace /> },
+          { path: '/dashboard/alerts', element: <Navigate to="/alerts" replace /> },
+          { path: '/dashboard/reports', element: <Navigate to="/reports" replace /> },
+          { path: '/dashboard/sprints', element: <Navigate to="/sprints" replace /> },
+          { path: '/dashboard/goals', element: <Navigate to="/goals" replace /> },
+          { path: '/dashboard/technical-debt', element: <Navigate to="/debt" replace /> },
+          { path: '/dashboard/integrations/github', element: <Navigate to="/settings/github" replace /> },
+          { path: '/dashboard/audit-logs', element: <Navigate to="/audit-logs" replace /> },
+          { path: '/dashboard/settings', element: <Navigate to="/settings" replace /> },
         ],
       },
     ],

@@ -103,68 +103,68 @@ export default function DashboardSidebar() {
                 icon={<FiUsers />}
                 label="Organization Members"
               />
-              <SidebarItem to="/dashboard/teams" icon={<FiLayers />} label="Teams" />
+              <SidebarItem to="/teams" icon={<FiLayers />} label="Teams" />
               <SidebarItem
-                to="/dashboard/onboarding"
+                to="/onboarding"
                 icon={<FiZap />}
                 label="Onboarding"
               />
             </SidebarGroup>
 
             <SidebarItem
-              to="/dashboard/repositories"
+              to="/settings/repositories"
               icon={<FiBriefcase />}
               label="Repositories"
             />
-            <SidebarItem to="/dashboard/projects" icon={<FiTarget />} label="Projects" />
+            <SidebarItem to="/projects" icon={<FiTarget />} label="Projects" />
 
             <SidebarGroup icon={<FiTrendingUp />} label="Quality Metrics">
               <SidebarItem
-                to="/dashboard/quality/dqs"
+                to="/scores"
                 icon={<FiCheckCircle />}
                 label="DQS Scores"
               />
               <SidebarItem
-                to="/dashboard/quality/sqs"
+                to="/scores"
                 icon={<FiTrendingUp />}
                 label="SQS Scores"
               />
               <SidebarItem
-                to="/dashboard/quality/coverage"
+                to="/coverage"
                 icon={<FiClipboard />}
                 label="Code Coverage"
               />
             </SidebarGroup>
 
-            <SidebarItem to="/dashboard/alerts" icon={<FiAlertTriangle />} label="Alerts" />
-            <SidebarItem to="/dashboard/reports" icon={<FiFileText />} label="Reports" />
+            <SidebarItem to="/alerts" icon={<FiAlertTriangle />} label="Alerts" />
+            <SidebarItem to="/reports" icon={<FiFileText />} label="Reports" />
             <SidebarItem
-              to="/dashboard/sprints"
+              to="/sprints"
               icon={<FiFlag />}
               label="Sprints & Releases"
             />
-            <SidebarItem to="/dashboard/goals" icon={<FiTarget />} label="Goals & OKRs" />
+            <SidebarItem to="/goals" icon={<FiTarget />} label="Goals & OKRs" />
             <SidebarItem
-              to="/dashboard/technical-debt"
+              to="/debt"
               icon={<FiBookOpen />}
               label="Technical Debt"
             />
 
             <SidebarGroup icon={<FiLink />} label="Integrations">
               <SidebarItem
-                to="/dashboard/integrations/github"
+                to="/settings/github"
                 icon={<FiGithub />}
                 label="GitHub"
               />
             </SidebarGroup>
 
             <SidebarItem
-              to="/dashboard/audit-logs"
+              to="/audit-logs"
               icon={<FiShield />}
               label="Audit Logs"
             />
             <SidebarItem
-              to="/dashboard/settings"
+              to="/settings"
               icon={<FiSettings />}
               label="Settings"
             />
