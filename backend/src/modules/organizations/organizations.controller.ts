@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { GetOrganization } from '../auth/decorators/get-organization.decorator';
 import { Role } from '@prisma/client';
 import { AuditLog } from '../audit/decorators/audit-log.decorator';
 
@@ -68,6 +70,107 @@ export class OrganizationsController {
   })
   async findAll(@GetUser('id') userId: string) {
     return this.organizationsService.findAllForUser(userId);
+  }
+
+  /**
+   * Get organization members for current active organization context
+   */
+  @Get('members')
+  @ApiOperation({ summary: 'Get members for current active organization' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of organization members',
+  })
+  async getMembersForCurrentOrg(
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser('id') userId: string,
+  ) {
+    let orgId = organizationId;
+    if (!orgId) {
+      const userOrgs = await this.organizationsService.findAllForUser(userId);
+      if (userOrgs.length > 0) {
+        orgId = userOrgs[0].id;
+      }
+    }
+    if (!orgId) {
+      throw new ForbiddenException('Organization context required.');
+    }
+    await this.organizationsService.verifyUserRole(orgId, userId, [
+      Role.OWNER,
+      Role.ADMIN,
+      Role.TEAM_LEAD,
+      Role.DEVELOPER,
+    ]);
+    return this.organizationsService.getMembers(orgId);
+  }
+
+  /**
+   * Update member role for current organization context
+   */
+  @Patch('members/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.OWNER)
+  @AuditLog({
+    action: 'UPDATE',
+    resourceType: 'OrganizationMember',
+    resourceIdParam: 'userId',
+    captureSnapshot: true,
+    includeRequestBody: true,
+    includeResponseBody: true,
+  })
+  @ApiOperation({ summary: 'Update member role in current organization' })
+  async updateMemberRoleForCurrentOrg(
+    @Param('userId') targetUserId: string,
+    @Body() dto: UpdateMemberRoleDto,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser('id') requestingUserId: string,
+  ) {
+    let orgId = organizationId;
+    if (!orgId) {
+      const userOrgs = await this.organizationsService.findAllForUser(requestingUserId);
+      if (userOrgs.length > 0) {
+        orgId = userOrgs[0].id;
+      }
+    }
+    if (!orgId) {
+      throw new ForbiddenException('Organization context required.');
+    }
+    await this.organizationsService.verifyUserRole(orgId, requestingUserId, [Role.OWNER]);
+    return this.organizationsService.updateMemberRole(orgId, targetUserId, dto.role, requestingUserId);
+  }
+
+  /**
+   * Remove member from current organization context
+   */
+  @Delete('members/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.OWNER)
+  @AuditLog({
+    action: 'DELETE',
+    resourceType: 'OrganizationMember',
+    resourceIdParam: 'userId',
+    captureSnapshot: true,
+    includeResponseBody: true,
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove member from current organization' })
+  async removeMemberFromCurrentOrg(
+    @Param('userId') targetUserId: string,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser('id') requestingUserId: string,
+  ) {
+    let orgId = organizationId;
+    if (!orgId) {
+      const userOrgs = await this.organizationsService.findAllForUser(requestingUserId);
+      if (userOrgs.length > 0) {
+        orgId = userOrgs[0].id;
+      }
+    }
+    if (!orgId) {
+      throw new ForbiddenException('Organization context required.');
+    }
+    await this.organizationsService.verifyUserRole(orgId, requestingUserId, [Role.OWNER, Role.ADMIN]);
+    await this.organizationsService.removeMember(orgId, targetUserId, requestingUserId);
   }
 
   /**
