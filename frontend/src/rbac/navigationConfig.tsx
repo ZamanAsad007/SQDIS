@@ -10,61 +10,32 @@ export interface NavItemConfig {
 }
 
 export const NAV_CONFIG: NavItemConfig[] = [
+  // Core Intelligence & Insights
   { label: 'Dashboard', path: '/dashboard' },
   { label: 'Quality Scores', path: '/scores' },
+  { label: 'Projects', path: '/projects', requiredPermission: 'projects:view' },
+  { label: 'Teams', path: '/teams', requiredPermission: 'teams:view' },
   { label: 'Developers', path: '/developers' },
   { label: 'Leaderboard', path: '/leaderboard' },
   { label: 'Commits', path: '/commits' },
   { label: 'Coverage', path: '/coverage' },
-  { label: 'Reviews', path: '/reviews' },
-  {
-    label: 'Teams',
-    path: '/teams',
-    requiredRole: 'TEAM_LEAD',
-    requiredPermission: 'teams:view',
-  },
-  {
-    label: 'Projects',
-    path: '/projects',
-    requiredRole: 'TEAM_LEAD',
-    requiredPermission: 'projects:view',
-  },
-  {
-    label: 'Sprints',
-    path: '/sprints',
-    requiredRole: 'TEAM_LEAD',
-    requiredPermission: 'sprints:view',
-  },
-  {
-    label: 'Releases',
-    path: '/releases',
-    requiredRole: 'ADMIN',
-    requiredPermission: 'releases:view',
-  },
-  { label: 'Goals', path: '/goals' },
-  {
-    label: 'Alerts',
-    path: '/alerts',
-    requiredRole: 'TEAM_LEAD',
-    requiredPermission: 'alerts:view',
-  },
-  {
-    label: 'Tech Debt',
-    path: '/debt',
-    requiredRole: 'TEAM_LEAD',
-    requiredPermission: 'debt:view',
-  },
-  { label: 'Reports', path: '/reports' },
+  { label: 'Reviews', path: '/reviews', requiredPermission: 'reviews:view' },
+  { label: 'Sprints', path: '/sprints', requiredPermission: 'sprints:view' },
+  { label: 'Releases', path: '/releases', requiredPermission: 'releases:view' },
+  { label: 'Goals', path: '/goals', requiredPermission: 'goals:view' },
+  { label: 'Tech Debt', path: '/debt', requiredPermission: 'debt:view' },
+  { label: 'Alerts', path: '/alerts', requiredPermission: 'alerts:view' },
+
+  // Operations & Admin
+  { label: 'Reports', path: '/reports', requiredPermission: 'reports:view' },
   {
     label: 'Organization Members',
     path: '/dashboard/org-members',
-    requiredRole: 'ADMIN',
-    requiredPermission: 'organization:manage',
+    requiredPermission: 'organization:view',
   },
   {
     label: 'Onboarding',
     path: '/onboarding',
-    requiredRole: 'ADMIN',
     requiredPermission: 'onboarding:view',
   },
   {

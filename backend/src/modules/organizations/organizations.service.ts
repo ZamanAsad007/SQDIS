@@ -30,6 +30,7 @@ export interface OrganizationResponse {
  * Response type for organization with member count
  */
 export interface OrganizationWithMemberCount extends OrganizationResponse {
+  role?: Role;
   memberCount: number;
 }
 
@@ -202,6 +203,7 @@ export class OrganizationsService {
 
     return memberships.map((membership) => ({
       ...this.mapToResponse(membership.organization),
+      role: membership.role,
       memberCount: membership.organization._count.members,
     }));
   }

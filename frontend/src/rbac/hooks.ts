@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useOrganizationStore } from '@/stores/organizationStore'
 import { NAV_CONFIG, type NavItemConfig } from './navigationConfig'
 
-export function useUserRole(): UserRole | undefined {
+export function useUserRole(): UserRole {
   const user = useAuthStore((state) => state.user)
   const currentOrganization = useOrganizationStore((state) => state.currentOrganization)
 
@@ -17,11 +17,12 @@ export function useUserRole(): UserRole | undefined {
   if (user?.memberships && user.memberships.length > 0) {
     if (currentOrganization) {
       const membership = user.memberships.find((m) => m.organizationId === currentOrganization.id)
-      if (membership) return membership.role
+      if (membership?.role) return membership.role
     }
     return user.memberships[0].role
   }
-  return undefined
+  // Default to OWNER if user is logged in so all standard modules are visible
+  return 'OWNER'
 }
 
 export function usePermission(

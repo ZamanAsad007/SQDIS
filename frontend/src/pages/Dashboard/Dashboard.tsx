@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { PageHeader } from '../pageUtils'
-import { useApi } from '../../hooks/useApi'
-import { authApi, auditLogsApi } from '../../services'
+import { dashboardService } from '@/services'
 import MetricCard from './components/MetricCard'
 import CommitActivityChart from './components/CommitActivityChart'
 import SQSTrendChart from './components/SQSTrendChart'
@@ -12,75 +12,19 @@ import DevelopersTable from './components/DevelopersTable'
 import ActivityFeed from './components/ActivityFeed'
 import {
   FiAlertTriangle,
-  FiBarChart2,
-  FiBriefcase,
+  FiBox,
   FiCode,
   FiCrosshair,
+  FiShield,
   FiUsers,
+  FiPlus,
 } from 'react-icons/fi'
 
-function sumCounts(items: unknown): number {
-  if (Array.isArray(items)) {
-    return items.reduce((total, item) => {
-      if (typeof item === 'number') return total + item
-      if (item && typeof item === 'object') {
-        if ('count' in item && typeof item.count === 'number') return total + item.count
-        if ('actionCount' in item && typeof item.actionCount === 'number') return total + item.actionCount
-        if ('failedAttempts' in item && typeof item.failedAttempts === 'number') return total + item.failedAttempts
-      }
-      return total
-    }, 0)
-  }
-  if (items && typeof items === 'object') {
-    return Object.values(items as Record<string, unknown>).reduce<number>((total, val) => {
-      return total + (typeof val === 'number' ? val : 0)
-    }, 0)
-  }
-  return 0
-}
-
 export default function Dashboard() {
-  const { data: profile, call: loadProfile } = useApi(authApi.getProfile)
-  const { data: orgData, call: loadOrganizations } = useApi(authApi.getOrganizations)
-  const { data: auditLogData, call: loadAuditLogs } = useApi(auditLogsApi.getAll)
-  const { data: activeUsersData, call: loadActiveUsers } = useApi(auditLogsApi.getActiveUsers)
-  const { data: failedPermissionsData, call: loadFailedPermissions } = useApi(auditLogsApi.getFailedPermissions)
-  const { data: actionCountsData, call: loadActionCounts } = useApi(auditLogsApi.getActionCounts)
-  const { data: highLogsData, call: loadHighLogs } = useApi(auditLogsApi.getAll)
-  const { data: criticalLogsData, call: loadCriticalLogs } = useApi(auditLogsApi.getAll)
-
-  useEffect(() => {
-    void loadProfile()
-    void loadOrganizations()
-  }, [loadOrganizations, loadProfile])
-
-  const organizations = orgData ?? []
-  const currentOrgId = profile?.organizationId ?? organizations[0]?.id ?? ''
-
-  useEffect(() => {
-    if (!currentOrgId) return
-
-    void Promise.all([
-      loadAuditLogs({ page: 1, pageSize: 1 }),
-      loadActiveUsers({ limit: 100 }),
-      loadFailedPermissions({}),
-      loadActionCounts({}),
-      loadHighLogs({ page: 1, pageSize: 1, severity: 'HIGH' }),
-      loadCriticalLogs({ page: 1, pageSize: 1, severity: 'CRITICAL' }),
-    ])
-  }, [currentOrgId, loadActionCounts, loadActiveUsers, loadAuditLogs, loadCriticalLogs, loadFailedPermissions, loadHighLogs])
-
-  const metrics = useMemo(
-    () => ({
-      organizations: organizations.length,
-      activeUsers: activeUsersData?.length ?? 0,
-      auditEvents: auditLogData?.total ?? 0,
-      criticalEvents: (highLogsData?.total ?? 0) + (criticalLogsData?.total ?? 0),
-      failedPermissions: sumCounts(failedPermissionsData),
-      actionVolume: sumCounts(actionCountsData),
-    }),
-    [activeUsersData, actionCountsData, auditLogData?.total, failedPermissionsData, highLogsData?.total, criticalLogsData?.total, organizations.length],
-  )
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => dashboardService.getStats(),
+  })
 
   return (
     <div className="space-y-6">
@@ -89,45 +33,69 @@ export default function Dashboard() {
         description="Organization-wide software quality overview, engineering metrics, and repository health."
       />
 
+      {/* Setup banner if no repositories exist yet */}
+      {!isLoading && stats && stats.totalRepositories === 0 && (
+        <div className="rounded-xl border border-blue-200/80 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-blue-900 dark:text-blue-200 text-sm">
+              Connect your first GitHub repository
+            </h3>
+            <p className="text-xs text-blue-700/80 dark:text-blue-300/80">
+              Link your repositories in Settings to start tracking commit metrics, developer velocity, and ML quality scores.
+            </p>
+          </div>
+          <Link
+            to="/settings"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors shrink-0"
+          >
+            <FiPlus className="h-3.5 w-3.5" />
+            <span>Connect Repository</span>
+          </Link>
+        </div>
+      )}
+
+      {/* Real Statistics Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
-          title="Organizations"
-          icon={<FiBriefcase />}
-          value={metrics.organizations.toString()}
-          trend={{ direction: 'up', label: 'Connected from auth API' }}
+          title="Connected Repositories"
+          icon={<FiBox />}
+          value={isLoading ? '...' : (stats?.totalRepositories ?? 0).toString()}
+          trend={{ direction: 'up', label: `${stats?.totalProjects ?? 0} active projects` }}
         />
         <MetricCard
-          title="Active Users"
+          title="Active Developers"
           icon={<FiUsers />}
-          value={metrics.activeUsers.toString()}
-          trend={{ direction: 'up', label: 'From audit analytics' }}
+          value={isLoading ? '...' : (stats?.totalDevelopers ?? 0).toString()}
+          trend={{ direction: 'flat', label: `${stats?.totalTeams ?? 0} teams` }}
         />
         <MetricCard
-          title="Audit Events"
-          icon={<FiBarChart2 />}
-          value={metrics.auditEvents.toString()}
-          trend={{ direction: 'up', label: 'Current organization total' }}
-        />
-        <MetricCard
-          title="Critical Events"
-          icon={<FiCrosshair />}
-          value={metrics.criticalEvents.toString()}
-          trend={{ direction: 'down', label: 'HIGH + CRITICAL logs' }}
-        />
-        <MetricCard
-          title="Failed Permissions"
+          title="Total Ingested Commits"
           icon={<FiCode />}
-          value={metrics.failedPermissions.toString()}
-          trend={{ direction: 'up', label: 'Audit analytics total' }}
+          value={isLoading ? '...' : (stats?.totalCommits ?? 0).toLocaleString()}
+          secondary={stats?.bugFixCommits ? `${stats.bugFixCommits} bugfixes` : undefined}
         />
         <MetricCard
-          title="Action Volume"
+          title="Average Quality Score"
+          icon={<FiShield />}
+          value={isLoading ? '...' : (stats?.avgSQS && stats.avgSQS > 0 ? `${stats.avgSQS.toFixed(1)} / 100` : 'N/A')}
+          highlight="sqs"
+          trend={{ direction: 'up', label: 'Normalized SQS index' }}
+        />
+        <MetricCard
+          title="Average Test Coverage"
+          icon={<FiCrosshair />}
+          value={isLoading ? '...' : (stats?.avgCoverage && stats.avgCoverage > 0 ? `${stats.avgCoverage.toFixed(1)}%` : 'N/A')}
+          trend={{ direction: 'up', label: 'From latest reports' }}
+        />
+        <MetricCard
+          title="Active Quality Alerts"
           icon={<FiAlertTriangle />}
-          value={metrics.actionVolume.toString()}
-          secondary="From audit action counts"
+          value={isLoading ? '...' : (stats?.riskyModulesCount ?? 0).toString()}
+          trend={{ direction: (stats?.riskyModulesCount ?? 0) > 0 ? 'up' : 'flat', label: 'HIGH & CRITICAL alerts' }}
         />
       </div>
 
+      {/* Main Charts & Tables Grid */}
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-6">
           <SQSTrendChart />

@@ -12,6 +12,7 @@ import type { Response } from 'express';
 import { ReviewsService } from './reviews.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { GetOrganization } from '../auth/decorators/get-organization.decorator';
 import { User } from '@prisma/client';
 import { ReviewFiltersDto } from './dto/review-filters.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
@@ -30,10 +31,15 @@ export class ReviewsController {
   @ApiOperation({ summary: 'List pull request reviews' })
   @ApiResponse({ status: 200, description: 'List of reviews retrieved.' })
   async findAll(
-    @GetUser() user: User & { organizationId: string },
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
     @Query() filters: ReviewFiltersDto,
   ) {
-    return this.reviewsService.findAll(user.organizationId, filters, user.id);
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) {
+      return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+    }
+    return this.reviewsService.findAll(organizationId, filters, user.id);
   }
 
   /**
@@ -42,8 +48,13 @@ export class ReviewsController {
   @Get('pending')
   @ApiOperation({ summary: 'Get pending reviews for current user' })
   @ApiResponse({ status: 200, description: 'Pending reviews retrieved.' })
-  async getPendingReviews(@GetUser() user: User & { organizationId: string }) {
-    return this.reviewsService.getPendingReviews(user.id, user.organizationId);
+  async getPendingReviews(
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
+  ) {
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) return [];
+    return this.reviewsService.getPendingReviews(user.id, organizationId);
   }
 
   /**
@@ -54,11 +65,14 @@ export class ReviewsController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Reviewers leaderboard retrieved.' })
   async getLeaderboard(
-    @GetUser() user: User & { organizationId: string },
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
     @Query('limit') limit?: string,
   ) {
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) return [];
     return this.reviewsService.getEnhancedLeaderboard(
-      user.organizationId,
+      organizationId,
       limit ? parseInt(limit, 10) : 10,
     );
   }
@@ -72,11 +86,28 @@ export class ReviewsController {
   @ApiQuery({ name: 'endDate', required: false })
   @ApiResponse({ status: 200, description: 'Review analytics retrieved.' })
   async getAnalytics(
-    @GetUser() user: User & { organizationId: string },
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.reviewsService.getAnalytics(user.organizationId, startDate, endDate);
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) {
+      return {
+        totalReviews: 0,
+        approvedReviews: 0,
+        changesRequestedReviews: 0,
+        commentedReviews: 0,
+        avgTurnaroundHours: 0,
+        medianTurnaroundHours: 0,
+        p90TurnaroundHours: 0,
+        totalReviewComments: 0,
+        avgCommentsPerReview: 0,
+        thoroughReviewCount: 0,
+        fastReviewCount: 0,
+      };
+    }
+    return this.reviewsService.getAnalytics(organizationId, startDate, endDate);
   }
 
   /**
@@ -88,11 +119,22 @@ export class ReviewsController {
   @ApiQuery({ name: 'endDate', required: false })
   @ApiResponse({ status: 200, description: 'Quality metrics retrieved.' })
   async getQualityMetrics(
-    @GetUser() user: User & { organizationId: string },
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.reviewsService.getQualityMetrics(user.organizationId, startDate, endDate);
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) {
+      return {
+        qualityScore: 0,
+        avgDepthScore: 0,
+        constructiveCommentRatio: 0,
+        followUpDiscussionRate: 0,
+        distribution: { detailed: 0, moderate: 0, brief: 0, rubberStamp: 0 },
+      };
+    }
+    return this.reviewsService.getQualityMetrics(organizationId, startDate, endDate);
   }
 
   /**
@@ -103,11 +145,14 @@ export class ReviewsController {
   @ApiQuery({ name: 'days', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Review activity trend retrieved.' })
   async getActivityTrend(
-    @GetUser() user: User & { organizationId: string },
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
     @Query('days') days?: string,
   ) {
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) return [];
     return this.reviewsService.getActivityTrend(
-      user.organizationId,
+      organizationId,
       days ? parseInt(days, 10) : 30,
     );
   }
@@ -118,8 +163,13 @@ export class ReviewsController {
   @Get('peak-times')
   @ApiOperation({ summary: 'Get peak review activity days and hours' })
   @ApiResponse({ status: 200, description: 'Peak time metrics retrieved.' })
-  async getPeakTimes(@GetUser() user: User & { organizationId: string }) {
-    return this.reviewsService.getPeakTimes(user.organizationId);
+  async getPeakTimes(
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
+  ) {
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) return { peakDay: 'Monday', peakHour: 14, heatmap: [] };
+    return this.reviewsService.getPeakTimes(organizationId);
   }
 
   /**
@@ -128,8 +178,13 @@ export class ReviewsController {
   @Get('repositories')
   @ApiOperation({ summary: 'Get repositories containing reviews' })
   @ApiResponse({ status: 200, description: 'List of repositories retrieved.' })
-  async getRepositoriesWithReviews(@GetUser() user: User & { organizationId: string }) {
-    return this.reviewsService.getRepositoriesWithReviews(user.organizationId);
+  async getRepositoriesWithReviews(
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
+  ) {
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) return [];
+    return this.reviewsService.getRepositoriesWithReviews(organizationId);
   }
 
   /**
@@ -141,11 +196,17 @@ export class ReviewsController {
   @Header('Content-Disposition', 'attachment; filename=reviews.csv')
   @ApiResponse({ status: 200, description: 'CSV file returned.' })
   async exportReviews(
-    @GetUser() user: User & { organizationId: string },
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
     @Query() filters: ReviewFiltersDto,
     @Res() res: Response,
   ) {
-    const csv = await this.reviewsService.exportReviews(user.organizationId, filters, user.id);
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) {
+      res.send('');
+      return;
+    }
+    const csv = await this.reviewsService.exportReviews(organizationId, filters, user.id);
     res.send(csv);
   }
 
@@ -171,10 +232,13 @@ export class ReviewsController {
   @ApiParam({ name: 'developerId', description: 'Developer User ID' })
   @ApiResponse({ status: 200, description: 'Developer review stats retrieved.' })
   async getDeveloperStats(
-    @GetUser() user: User & { organizationId: string },
+    @GetOrganization() orgId: string | undefined,
+    @GetUser() user: User & { organizationId?: string },
     @Param('developerId') developerId: string,
   ) {
-    return this.reviewsService.getDeveloperStats(developerId, user.organizationId);
+    const organizationId = orgId || user.organizationId;
+    if (!organizationId) return null;
+    return this.reviewsService.getDeveloperStats(developerId, organizationId);
   }
 
   /**

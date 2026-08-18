@@ -57,13 +57,26 @@ export class LeaderboardService {
   }
 
   async getLeaderboard(
-    organizationId: string,
+    organizationId: string | undefined,
     query: LeaderboardQueryDto,
   ): Promise<LeaderboardResponseDto> {
-    const { teamId, sortBy, sortOrder, period } = query;
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const period = query.period || TimePeriod.MONTH;
 
+    if (!organizationId) {
+      return {
+        entries: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+        period,
+        cachedAt: new Date(),
+      };
+    }
+
+    const { teamId, sortBy, sortOrder } = query;
     const cacheKey = this.buildCacheKey(organizationId, query);
 
     const cached = await this.cacheService.get<LeaderboardResponseDto>(cacheKey);
@@ -77,7 +90,7 @@ export class LeaderboardService {
     const developers = await this.getDevelopersWithMetrics(
       organizationId,
       teamId,
-      period || TimePeriod.MONTH,
+      period,
     );
     const sortedDevelopers = this.sortDevelopers(developers, sortBy, sortOrder);
 
@@ -97,7 +110,7 @@ export class LeaderboardService {
       page,
       limit,
       totalPages,
-      period: period || TimePeriod.MONTH,
+      period,
       cachedAt: new Date(),
     };
 
@@ -111,6 +124,9 @@ export class LeaderboardService {
     teamId?: string,
     period: TimePeriod = TimePeriod.MONTH,
   ): Promise<Omit<LeaderboardEntryDto, 'rank'>[]> {
+    if (!organizationId) {
+      return [];
+    }
     const { startDate, endDate, previousStartDate } = this.getDateRange(period);
 
     const memberWhere: any = { organizationId };
@@ -334,12 +350,24 @@ export class LeaderboardService {
   }
 
   async getTeamLeaderboard(
-    organizationId: string,
+    organizationId: string | undefined,
     query: LeaderboardQueryDto,
   ): Promise<TeamLeaderboardResponseDto> {
-    const { period } = query;
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const period = query.period || TimePeriod.MONTH;
+
+    if (!organizationId) {
+      return {
+        entries: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+        period,
+        cachedAt: new Date(),
+      };
+    }
 
     const cacheKey = `team_${this.buildCacheKey(organizationId, query)}`;
 
