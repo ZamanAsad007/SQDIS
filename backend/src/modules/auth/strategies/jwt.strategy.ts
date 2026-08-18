@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Optional, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -15,8 +15,8 @@ import { PrismaService } from '../../../prisma';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly authService: AuthService,
-    private readonly prisma: PrismaService,
     configService: ConfigService,
+    @Optional() private readonly prisma?: PrismaService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -39,15 +39,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     let organizationId = payload.organizationId;
     let role = payload.role;
 
-    if (!organizationId || !role) {
-      const membership = await this.prisma.organizationMember.findFirst({
-        where: { userId: user.id },
-        orderBy: { joinedAt: 'asc' },
-      });
+    if ((!organizationId || !role) && this.prisma?.organizationMember) {
+      try {
+        const membership = await this.prisma.organizationMember.findFirst({
+          where: { userId: user.id },
+          orderBy: { joinedAt: 'asc' },
+        });
 
-      if (membership) {
-        organizationId = organizationId || membership.organizationId;
-        role = role || membership.role;
+        if (membership) {
+          organizationId = organizationId || membership.organizationId;
+          role = role || membership.role;
+        }
+      } catch {
+        // Fallback gracefully if database lookup fails
       }
     }
 

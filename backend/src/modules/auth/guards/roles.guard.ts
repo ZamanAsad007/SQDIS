@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, Optional, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
 import { ROLES_KEY } from '../decorators/roles.decorator';
@@ -28,7 +28,7 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
  */
 interface AuthenticatedRequest {
   user?: RequestUser;
-  headers: Record<string, string | string[] | undefined>;
+  headers?: Record<string, string | string[] | undefined>;
 }
 
 @Injectable()
@@ -37,7 +37,7 @@ export class RolesGuard implements CanActivate {
     private reflector: Reflector,
     private permissionCacheService: PermissionCacheService,
     private auditLogService: AuditLogService,
-    private prisma: PrismaService,
+    @Optional() private prisma?: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -54,7 +54,7 @@ export class RolesGuard implements CanActivate {
 
     // Get user from request (attached by JwtAuthGuard)
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const user = request.user as RequestUser;
+    const user = request?.user as RequestUser;
 
     // If no user, deny access
     if (!user) {
@@ -62,22 +62,26 @@ export class RolesGuard implements CanActivate {
     }
 
     // Resolve organization ID from header or user context
-    const headerOrgId = request.headers?.['x-organization-id'] as string;
+    const headerOrgId = request?.headers?.['x-organization-id'] as string;
     const orgId = headerOrgId || user.organizationId;
 
-    if (orgId) {
-      const membership = await this.prisma.organizationMember.findUnique({
-        where: {
-          organizationId_userId: {
-            organizationId: orgId,
-            userId: user.id,
+    if (orgId && this.prisma?.organizationMember) {
+      try {
+        const membership = await this.prisma.organizationMember.findUnique({
+          where: {
+            organizationId_userId: {
+              organizationId: orgId,
+              userId: user.id,
+            },
           },
-        },
-      });
+        });
 
-      if (membership) {
-        user.role = membership.role;
-        user.organizationId = orgId;
+        if (membership) {
+          user.role = membership.role;
+          user.organizationId = orgId;
+        }
+      } catch {
+        // Fallback gracefully if database lookup fails
       }
     }
 
