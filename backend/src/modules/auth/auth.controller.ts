@@ -1,8 +1,8 @@
-//eslint-disable @typescript-eslint/no-explicit-any
 import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   HttpCode,
   HttpStatus,
@@ -21,6 +21,8 @@ import { RefreshDto } from './dto/refresh.dto';
 import { SwitchOrganizationDto } from './dto/switch-organization.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthResponse, AuthUser } from './types/auth-response.type';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
@@ -165,6 +167,44 @@ export class AuthController {
       };
     }
     return currentUser;
+  }
+
+  /**
+   * Update current authenticated user profile
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully', type: AuthUser })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(
+    @GetUser() user: RequestUser,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<AuthUser> {
+    return this.authService.updateProfile(user.id, dto);
+  }
+
+  /**
+   * Change password for current authenticated user
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ auth: { ttl: 60000, limit: 5 } })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change password for current authenticated user' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 400, description: 'Current password incorrect or invalid new password' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async changePassword(
+    @GetUser() user: RequestUser,
+    @Body() dto: ChangePasswordDto,
+    @Req() req: any,
+  ): Promise<{ message: string }> {
+    const ipAddress = this.extractIpAddress(req);
+    return this.authService.changePassword(user.id, dto, ipAddress);
   }
 
   /**

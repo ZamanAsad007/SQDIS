@@ -392,4 +392,106 @@ describe('AuthService', () => {
     });
     expect(auditLoggerService.logTokenCleanup).toHaveBeenCalledWith(3);
   });
+
+  describe('updateProfile', () => {
+    it('updates user name and avatar and returns the current user profile', async () => {
+      prisma.user.findUnique
+        .mockResolvedValueOnce(user) // findUnique for user existence check
+        .mockResolvedValueOnce({
+          ...user,
+          name: 'Updated Name',
+          avatarUrl: 'https://example.com/avatar.png',
+          memberships: [],
+        }); // findUnique in getCurrentUser
+      prisma.user.update.mockResolvedValueOnce({
+        ...user,
+        name: 'Updated Name',
+        avatarUrl: 'https://example.com/avatar.png',
+      });
+
+      const result = await service.updateProfile('user-1', {
+        name: 'Updated Name',
+        avatarUrl: 'https://example.com/avatar.png',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: {
+          name: 'Updated Name',
+          avatarUrl: 'https://example.com/avatar.png',
+        },
+      });
+      expect(result.name).toBe('Updated Name');
+    });
+
+    it('throws NotFoundException if user is not found', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.updateProfile('nonexistent-user', { name: 'New Name' }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('changePassword', () => {
+    it('verifies current password, hashes new password, and updates user', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        ...user,
+        passwordHash: 'old-hash',
+      });
+      jest.mocked(verifyPassword).mockResolvedValueOnce(true);
+      jest.mocked(hashPassword).mockResolvedValueOnce('new-hash');
+      prisma.user.update.mockResolvedValueOnce({
+        ...user,
+        passwordHash: 'new-hash',
+      });
+
+      const result = await service.changePassword(
+        'user-1',
+        {
+          currentPassword: 'OldPassword123!',
+          newPassword: 'NewPassword123!',
+        },
+        '127.0.0.1',
+      );
+
+      expect(verifyPassword).toHaveBeenCalledWith('OldPassword123!', 'old-hash');
+      expect(hashPassword).toHaveBeenCalledWith('NewPassword123!');
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { passwordHash: 'new-hash' },
+      });
+      expect(auditLoggerService.logPasswordResetSuccess).toHaveBeenCalledWith('user-1', '127.0.0.1');
+      expect(result).toEqual({ message: 'Password changed successfully' });
+    });
+
+    it('throws BadRequestException if current password is wrong', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        ...user,
+        passwordHash: 'old-hash',
+      });
+      jest.mocked(verifyPassword).mockResolvedValueOnce(false);
+
+      await expect(
+        service.changePassword('user-1', {
+          currentPassword: 'WrongPassword!',
+          newPassword: 'NewPassword123!',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws BadRequestException if user has no passwordHash (OAuth only)', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        ...user,
+        passwordHash: null,
+      });
+
+      await expect(
+        service.changePassword('user-1', {
+          currentPassword: 'Password123!',
+          newPassword: 'NewPassword123!',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
 });

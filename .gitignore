@@ -11,3 +11,7 @@ frontend_docs.md
 backend_test_commits.md
 backend/test/backend.integration.e2e-spec.ts
 backend/src/modules/dashboard/dashboard.service.spec.ts
+futureplan.md
+backendDoc.md
+qa.md
+plan.md
