@@ -100,21 +100,43 @@ Ensure you have the following installed on your machine:
    cp .env.example .env
    ```
 
-3. Open the newly created `.env` file and replace the placeholder secrets with actual credentials (e.g., GitHub OAuth app client ID and secret, JWT tokens, and SMTP settings).
+3. Open the newly created `.env` file and configure credentials as needed.
 
 4. Build and start all services:
    ```bash
    docker compose up --build
    ```
 
-5. The services will be accessible at the following URLs:
-   - Frontend Client: http://localhost:5173
-   - Backend API: http://localhost:3000
-   - ML Service: http://localhost:8000
-   - Grafana Dashboards: http://localhost:3001
-   - Prometheus: http://localhost:9090
+5. Seed the database with demo/viva presentation data:
+   ```bash
+   docker compose exec backend npm run db:seed
+   ```
 
-Prisma migrations deploy automatically on startup inside the backend container.
+6. The services will be accessible at the following URLs:
+   - **Frontend Client**: http://localhost:5173
+   - **Backend API**: http://localhost:3000
+   - **API Docs (Swagger)**: http://localhost:3000/api/docs
+   - **ML Service**: http://localhost:8000
+   - **Grafana Dashboards**: http://localhost:3001
+   - **Prometheus**: http://localhost:9090
+
+---
+
+## Demo & Presentation Credentials
+
+The database can be seeded with realistic data for presentations and viva testing:
+
+```bash
+# From backend directory
+npm run db:seed
+```
+
+| Role | Name | Email | Password | Organization | Permissions |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 👑 **Owner / Admin** | Admin User | `admin@sqdis.local` | `Admin123!` | Acme Software Corporation (`acme-corp`) | Full access, settings, unmapped emails, org deletion |
+| 👩‍💼 **Team Lead** | Sarah Teamlead | `lead@sqdis.local` | `Password123!` | Acme Software Corporation (`acme-corp`) | Manage sprints, goals, teams, project assignments |
+| 👨‍💻 **Developer 1** | Alex Developer | `dev1@sqdis.local` | `Password123!` | Acme Software Corporation (`acme-corp`) | View sprints, commits, DQS metrics, profile settings |
+| 👨‍💻 **Developer 2** | Jordan Smith | `dev2@sqdis.local` | `Password123!` | Acme Software Corporation (`acme-corp`) | View sprints, commits, DQS metrics, profile settings |
 
 ### Option 2: Running Services Manually
 
