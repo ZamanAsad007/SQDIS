@@ -8,6 +8,8 @@ import { developersService } from '@/services'
 import { queryKeys } from '@/lib/queryClient'
 import { PageHeader, QueryState, formatScore } from './pageUtils'
 
+import type { LeaderboardEntry } from '@/types'
+
 type Period = 'week' | 'month' | 'quarter' | 'year' | 'all'
 
 export function LeaderboardPage() {
@@ -16,6 +18,13 @@ export function LeaderboardPage() {
     queryKey: queryKeys.leaderboard.developers({ period, limit: 50 }),
     queryFn: () => developersService.getLeaderboard({ period, limit: 50 }),
   })
+
+  const rawLeaderboard = leaderboardQuery.data
+  const leaderboardEntries: LeaderboardEntry[] = Array.isArray(rawLeaderboard)
+    ? rawLeaderboard
+    : (rawLeaderboard && typeof rawLeaderboard === 'object' && Array.isArray((rawLeaderboard as any).entries))
+    ? (rawLeaderboard as any).entries
+    : []
 
   return (
     <div>
@@ -28,7 +37,7 @@ export function LeaderboardPage() {
         <Card>
           <CardContent className="p-0">
             <div className="divide-y divide-slate-200 dark:divide-slate-800">
-              {(leaderboardQuery.data ?? []).map((entry) => (
+              {leaderboardEntries.map((entry) => (
                 <Link
                   key={entry.userId}
                   to={`/developers/${entry.userId}`}

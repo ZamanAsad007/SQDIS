@@ -49,8 +49,17 @@ export function DebtPage() {
   ]
 
   const responseData = debtQuery.data
-  const items = responseData?.data ?? []
-  const hotspots = hotspotsQuery.data ?? []
+  const items: DebtItem[] = Array.isArray(responseData)
+    ? responseData
+    : (responseData && typeof responseData === 'object' && Array.isArray((responseData as any).data))
+    ? (responseData as any).data
+    : []
+  const rawHotspots = hotspotsQuery.data
+  const hotspots: DebtHotspot[] = Array.isArray(rawHotspots)
+    ? rawHotspots
+    : (rawHotspots && typeof rawHotspots === 'object' && Array.isArray((rawHotspots as any).data))
+    ? (rawHotspots as any).data
+    : []
   
   // Client-side search filtering
   const filteredItems = useMemo(() => {

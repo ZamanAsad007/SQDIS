@@ -60,10 +60,17 @@ export function ProjectsPage() {
     },
   })
 
-  const projects = projectsQuery.data ?? []
+  const rawProjects = projectsQuery.data
+  const projects: Project[] = Array.isArray(rawProjects)
+    ? rawProjects
+    : (rawProjects && typeof rawProjects === 'object' && Array.isArray((rawProjects as any).data))
+    ? (rawProjects as any).data
+    : (rawProjects && typeof rawProjects === 'object' && Array.isArray((rawProjects as any).projects))
+    ? (rawProjects as any).projects
+    : []
   
   const filteredAndSortedProjects = useMemo(() => {
-    let result = projectsQuery.data ?? []
+    let result = [...projects]
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       result = result.filter(p => 

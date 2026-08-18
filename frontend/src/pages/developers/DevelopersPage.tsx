@@ -9,13 +9,20 @@ import { queryKeys } from '@/lib/queryClient'
 import { formatDate } from '@/lib/utils'
 import { MetricTile, PageHeader, QueryState, formatScore } from '../pageUtils'
 
+import type { Developer } from '@/types'
+
 export function DevelopersPage() {
   const developersQuery = useQuery({
     queryKey: queryKeys.leaderboard.developers({ limit: 100 }),
     queryFn: () => developersService.getAll(),
   })
 
-  const developers = developersQuery.data ?? []
+  const rawDevelopers = developersQuery.data
+  const developers: Developer[] = Array.isArray(rawDevelopers)
+    ? rawDevelopers
+    : (rawDevelopers && typeof rawDevelopers === 'object' && Array.isArray((rawDevelopers as any).entries))
+    ? (rawDevelopers as any).entries
+    : []
   const activeCount = developers.filter((developer) => developer.status === 'ACTIVE').length
   const avgDqs =
     developers.length > 0

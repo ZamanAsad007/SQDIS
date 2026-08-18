@@ -680,9 +680,11 @@ export class CommitsService {
       anomalyOnly,
       page = 1,
       limit = 20,
+      pageSize,
     } = filters;
 
-    const skip = (page - 1) * limit;
+    const effectiveLimit = pageSize || limit;
+    const skip = (page - 1) * effectiveLimit;
 
     // Build where clause
     const where: Prisma.CommitWhereInput = {};

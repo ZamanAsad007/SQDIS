@@ -10,6 +10,8 @@ import { queryKeys } from '@/lib/queryClient'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { MetricTile, PageHeader, QueryState } from '../pageUtils'
 
+import type { Commit } from '@/types'
+
 export function CommitsPage() {
   const [search, setSearch] = useState('')
   const commitsQuery = useQuery({
@@ -21,7 +23,12 @@ export function CommitsPage() {
     queryFn: () => commitsService.getStats(),
   })
 
-  const commits = commitsQuery.data ?? []
+  const rawCommits = commitsQuery.data
+  const commits: Commit[] = Array.isArray(rawCommits)
+    ? rawCommits
+    : (rawCommits && typeof rawCommits === 'object' && Array.isArray((rawCommits as any).data))
+    ? (rawCommits as any).data
+    : []
   const chartData = useMemo(
     () =>
       commits.slice(0, 14).reverse().map((commit) => ({

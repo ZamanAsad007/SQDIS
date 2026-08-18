@@ -13,6 +13,8 @@ import { githubService } from '@/services'
 import { queryKeys } from '@/lib/queryClient'
 import { QueryState } from '../pageUtils'
 
+import type { WebhookLogEntry } from '@/types'
+
 export function GitHubSettingsPage() {
   const queryClient = useQueryClient()
   const [searchLogs, setSearchLogs] = useState('')
@@ -55,7 +57,14 @@ export function GitHubSettingsPage() {
     { name: 'workflow', description: 'Update GitHub Action workflows', granted: false },
   ]
 
-  const webhookLogs = webhookLogsQuery.data ?? []
+  const rawLogs = webhookLogsQuery.data
+  const webhookLogs: WebhookLogEntry[] = Array.isArray(rawLogs)
+    ? rawLogs
+    : (rawLogs && typeof rawLogs === 'object' && Array.isArray((rawLogs as any).data))
+    ? (rawLogs as any).data
+    : (rawLogs && typeof rawLogs === 'object' && Array.isArray((rawLogs as any).logs))
+    ? (rawLogs as any).logs
+    : []
 
   const filteredLogs = webhookLogs.filter(log => 
     (log.eventType || '').toLowerCase().includes(searchLogs.toLowerCase()) || 
