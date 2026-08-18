@@ -5,6 +5,7 @@ import { ROLES_KEY } from '../decorators/roles.decorator';
 import type { RequestUser } from '../decorators/get-user.decorator';
 import { PermissionCacheService } from '../services/permission-cache.service';
 import { AuditLogService } from '../../audit/services/audit-log.service';
+import { PrismaService } from '../../../prisma';
 
 /**
  * Role hierarchy mapping roles to numeric levels
@@ -27,6 +28,7 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
  */
 interface AuthenticatedRequest {
   user?: RequestUser;
+  headers: Record<string, string | string[] | undefined>;
 }
 
 @Injectable()
@@ -35,6 +37,7 @@ export class RolesGuard implements CanActivate {
     private reflector: Reflector,
     private permissionCacheService: PermissionCacheService,
     private auditLogService: AuditLogService,
+    private prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -53,8 +56,32 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user as RequestUser;
 
-    // If no user or no role, deny access
-    if (!user || !user.role) {
+    // If no user, deny access
+    if (!user) {
+      return false;
+    }
+
+    // Resolve organization ID from header or user context
+    const headerOrgId = request.headers?.['x-organization-id'] as string;
+    const orgId = headerOrgId || user.organizationId;
+
+    if (orgId) {
+      const membership = await this.prisma.organizationMember.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: orgId,
+            userId: user.id,
+          },
+        },
+      });
+
+      if (membership) {
+        user.role = membership.role;
+        user.organizationId = orgId;
+      }
+    }
+
+    if (!user.role) {
       return false;
     }
 
@@ -106,11 +133,11 @@ export class RolesGuard implements CanActivate {
    * @returns true if user's role level is >= any of the required role levels
    */
   private checkRoleHierarchy(userRole: Role, requiredRoles: Role[]): boolean {
-    const userLevel = ROLE_HIERARCHY[userRole];
+    const userLevel = ROLE_HIERARCHY[userRole] || 1;
 
     // User has access if their role level is >= any of the required role levels
     return requiredRoles.some((requiredRole) => {
-      const requiredLevel = ROLE_HIERARCHY[requiredRole];
+      const requiredLevel = ROLE_HIERARCHY[requiredRole] || 1;
       return userLevel >= requiredLevel;
     });
   }
@@ -138,7 +165,7 @@ export class RolesGuard implements CanActivate {
 
     // Determine the most restrictive required role (highest level)
     const requiredRole = requiredRoles.reduce((highest, current) => {
-      return ROLE_HIERARCHY[current] > ROLE_HIERARCHY[highest] ? current : highest;
+      return (ROLE_HIERARCHY[current] || 1) > (ROLE_HIERARCHY[highest] || 1) ? current : highest;
     });
 
     await this.auditLogService.logPermissionCheck({
