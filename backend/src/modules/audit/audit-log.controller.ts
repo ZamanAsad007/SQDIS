@@ -21,12 +21,14 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import type { RequestUser } from '../auth/decorators/get-user.decorator';
+import { GetOrganization } from '../auth/decorators/get-organization.decorator';
 import { Role } from '@prisma/client';
 import { EnhancedAuditLogService } from './services/enhanced-audit-log.service';
 import { AuditExportService } from './services/audit-export.service';
 import { AuditRetentionService } from './services/audit-retention.service';
 import { AuditAnalyticsService } from './services/audit-analytics.service';
 import { FileStorageService } from '../reports/services/file-storage.service';
+import { PrismaService } from '../../prisma';
 import {
   QueryAuditLogsDto,
   ExportAuditLogsDto,
@@ -49,7 +51,24 @@ export class AuditLogController {
     private readonly auditRetentionService: AuditRetentionService,
     private readonly auditAnalyticsService: AuditAnalyticsService,
     private readonly fileStorageService: FileStorageService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * Helper to resolve the active organization ID
+   */
+  private async resolveOrgId(user: RequestUser, orgId?: string): Promise<string | null> {
+    if (orgId) return orgId;
+    if (user?.organizationId) return user.organizationId;
+    if (user?.id) {
+      const membership = await this.prisma.organizationMember.findFirst({
+        where: { userId: user.id },
+        orderBy: { joinedAt: 'asc' },
+      });
+      if (membership) return membership.organizationId;
+    }
+    return null;
+  }
 
   /**
    * Query audit logs with advanced filtering
@@ -65,15 +84,19 @@ export class AuditLogController {
     status: HttpStatus.FORBIDDEN,
     description: 'User does not have permission to access audit logs',
   })
-  async queryLogs(@Query() queryDto: QueryAuditLogsDto, @GetUser() user: RequestUser) {
-    // Ensure organizationId is set from the authenticated user
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+  async queryLogs(
+    @Query() queryDto: QueryAuditLogsDto,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      return { data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
     }
 
     const filters = {
       userId: queryDto.userId,
-      organizationId: user.organizationId, // Always filter by user's organization
+      organizationId: orgId,
       action: queryDto.action,
       resourceType: queryDto.resourceType,
       resourceId: queryDto.resourceId,
@@ -111,12 +134,17 @@ export class AuditLogController {
     status: HttpStatus.FORBIDDEN,
     description: 'User does not have permission to access this audit log',
   })
-  async getLogById(@Param('id') id: string, @GetUser() user: RequestUser) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+  async getLogById(
+    @Param('id') id: string,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      throw new NotFoundException('Audit log entry not found');
     }
 
-    return this.enhancedAuditLogService.getLogById(id, user.organizationId);
+    return this.enhancedAuditLogService.getLogById(id, orgId);
   }
 
   /**
@@ -133,14 +161,19 @@ export class AuditLogController {
     status: HttpStatus.FORBIDDEN,
     description: 'User does not have permission to export audit logs',
   })
-  async exportLogs(@Body() exportDto: ExportAuditLogsDto, @GetUser() user: RequestUser) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+  async exportLogs(
+    @Body() exportDto: ExportAuditLogsDto,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      throw new UnauthorizedException('Organization context required');
     }
 
     const filters = {
       userId: exportDto.userId,
-      organizationId: user.organizationId,
+      organizationId: orgId,
       action: exportDto.action,
       resourceType: exportDto.resourceType,
       resourceId: exportDto.resourceId,
@@ -153,13 +186,13 @@ export class AuditLogController {
       filters,
       exportDto.format,
       user.id,
-      user.organizationId,
+      orgId,
     );
 
     // Log the export action
     await this.enhancedAuditLogService.logExport({
       userId: user.id,
-      organizationId: user.organizationId,
+      organizationId: orgId,
       exportType: exportDto.format,
       scope: 'AuditLog',
       recordCount: result.estimatedRecords,
@@ -245,7 +278,7 @@ export class AuditLogController {
    * Get retention policy for the organization
    */
   @Get('retention-policy')
-  @Roles(Role.OWNER)
+  @Roles(Role.OWNER, Role.ADMIN)
   @ApiOperation({ summary: 'Get retention policy for the organization' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -255,19 +288,23 @@ export class AuditLogController {
     status: HttpStatus.FORBIDDEN,
     description: 'Only OWNER role can access retention policies',
   })
-  async getRetentionPolicy(@GetUser() user: RequestUser) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+  async getRetentionPolicy(
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      throw new UnauthorizedException('Organization context required');
     }
 
-    return this.auditRetentionService.getRetentionPolicy(user.organizationId);
+    return this.auditRetentionService.getRetentionPolicy(orgId);
   }
 
   /**
    * Update retention policy for the organization
    */
   @Put('retention-policy')
-  @Roles(Role.OWNER)
+  @Roles(Role.OWNER, Role.ADMIN)
   @ApiOperation({ summary: 'Update retention policy for the organization' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -283,13 +320,15 @@ export class AuditLogController {
   })
   async updateRetentionPolicy(
     @Body() updateDto: UpdateRetentionPolicyDto,
+    @GetOrganization() organizationId: string | undefined,
     @GetUser() user: RequestUser,
   ) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      throw new UnauthorizedException('Organization context required');
     }
 
-    return this.auditRetentionService.updateRetentionPolicy(user.organizationId, updateDto);
+    return this.auditRetentionService.updateRetentionPolicy(orgId, updateDto);
   }
 
   /**
@@ -309,16 +348,18 @@ export class AuditLogController {
   async getActionCounts(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @GetUser() user: RequestUser,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser() user: RequestUser = {} as RequestUser,
   ) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      return [];
     }
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Default: 30 days ago
     const end = endDate ? new Date(endDate) : new Date(); // Default: now
 
-    return this.auditAnalyticsService.getActionCountsByType(user.organizationId, start, end);
+    return this.auditAnalyticsService.getActionCountsByType(orgId, start, end);
   }
 
   /**
@@ -336,13 +377,15 @@ export class AuditLogController {
     description: 'User does not have permission to access analytics',
   })
   async getActiveUsers(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+    @GetUser() user: RequestUser,
+    @GetOrganization() organizationId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
-    @GetUser() user: RequestUser = {} as RequestUser,
   ) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      return [];
     }
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -350,7 +393,7 @@ export class AuditLogController {
     const userLimit = limit ? parseInt(limit, 10) : 10;
 
     return this.auditAnalyticsService.getMostActiveUsers(
-      user.organizationId,
+      orgId,
       start,
       end,
       userLimit,
@@ -372,18 +415,20 @@ export class AuditLogController {
     description: 'User does not have permission to access analytics',
   })
   async getFailedPermissions(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
     @GetUser() user: RequestUser,
+    @GetOrganization() organizationId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      return [];
     }
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
 
-    return this.auditAnalyticsService.getFailedPermissionChecks(user.organizationId, start, end);
+    return this.auditAnalyticsService.getFailedPermissionChecks(orgId, start, end);
   }
 
   /**
@@ -401,13 +446,15 @@ export class AuditLogController {
     description: 'User does not have permission to access analytics',
   })
   async getActionTimeline(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+    @GetUser() user: RequestUser,
+    @GetOrganization() organizationId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
     @Query('granularity') granularity?: 'hour' | 'day' | 'week',
-    @GetUser() user: RequestUser = {} as RequestUser,
   ) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      return [];
     }
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -415,7 +462,7 @@ export class AuditLogController {
     const timeGranularity = granularity || 'day';
 
     return this.auditAnalyticsService.getActionTimeline(
-      user.organizationId,
+      orgId,
       start,
       end,
       timeGranularity,
@@ -437,13 +484,15 @@ export class AuditLogController {
     description: 'User does not have permission to access analytics',
   })
   async getTopResources(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+    @GetUser() user: RequestUser,
+    @GetOrganization() organizationId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
-    @GetUser() user: RequestUser = {} as RequestUser,
   ) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      return [];
     }
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -451,7 +500,7 @@ export class AuditLogController {
     const resourceLimit = limit ? parseInt(limit, 10) : 10;
 
     return this.auditAnalyticsService.getMostAccessedResources(
-      user.organizationId,
+      orgId,
       start,
       end,
       resourceLimit,
@@ -462,7 +511,7 @@ export class AuditLogController {
    * GDPR data access - Get all audit entries for a specific user
    */
   @Get('gdpr/data-access/:userId')
-  @Roles(Role.OWNER)
+  @Roles(Role.OWNER, Role.ADMIN)
   @ApiOperation({ summary: 'Get all audit entries for a specific user (GDPR data access)' })
   @ApiParam({ name: 'userId', description: 'User ID to retrieve audit data for' })
   @ApiResponse({
@@ -471,17 +520,22 @@ export class AuditLogController {
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Only OWNER role can access GDPR data',
+    description: 'Only OWNER/ADMIN role can access GDPR data',
   })
-  async getGdprDataAccess(@Param('userId') userId: string, @GetUser() user: RequestUser) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+  async getGdprDataAccess(
+    @Param('userId') userId: string,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      return { data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
     }
 
     // Query all audit logs for the specified user within the organization
     const filters = {
       userId,
-      organizationId: user.organizationId,
+      organizationId: orgId,
     };
 
     const pagination = {
@@ -511,20 +565,25 @@ export class AuditLogController {
     status: HttpStatus.FORBIDDEN,
     description: 'Only OWNER role can anonymize user data',
   })
-  async anonymizeGdprData(@Param('userId') userId: string, @GetUser() user: RequestUser) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+  async anonymizeGdprData(
+    @Param('userId') userId: string,
+    @GetOrganization() organizationId: string | undefined,
+    @GetUser() user: RequestUser,
+  ) {
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      throw new UnauthorizedException('Organization context required');
     }
 
     const result = await this.enhancedAuditLogService.anonymizeUserData(
       userId,
-      user.organizationId,
+      orgId,
     );
 
     // Log the anonymization action
     await this.enhancedAuditLogService.logAction({
       userId: user.id,
-      organizationId: user.organizationId,
+      organizationId: orgId,
       action: 'GDPR_ANONYMIZATION',
       resourceType: 'User',
       resourceId: userId,
@@ -541,7 +600,7 @@ export class AuditLogController {
    * Generate compliance report (SOC 2, GDPR, HIPAA)
    */
   @Post('compliance/report')
-  @Roles(Role.OWNER)
+  @Roles(Role.OWNER, Role.ADMIN)
   @ApiOperation({ summary: 'Generate a compliance report with certification' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -549,14 +608,16 @@ export class AuditLogController {
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Only OWNER role can generate compliance reports',
+    description: 'Only OWNER/ADMIN role can generate compliance reports',
   })
   async generateComplianceReport(
     @Body() reportDto: GenerateComplianceReportDto,
+    @GetOrganization() organizationId: string | undefined,
     @GetUser() user: RequestUser,
   ) {
-    if (!user.organizationId) {
-      throw new UnauthorizedException('User must belong to an organization');
+    const orgId = await this.resolveOrgId(user, organizationId);
+    if (!orgId) {
+      throw new UnauthorizedException('Organization context required');
     }
 
     const startDate = reportDto.startDate
@@ -565,7 +626,7 @@ export class AuditLogController {
     const endDate = reportDto.endDate ? new Date(reportDto.endDate) : new Date(); // Default: now
 
     const report = await this.enhancedAuditLogService.generateComplianceReport(
-      user.organizationId,
+      orgId,
       reportDto.reportType,
       startDate,
       endDate,
@@ -574,7 +635,7 @@ export class AuditLogController {
     // Log the report generation action
     await this.enhancedAuditLogService.logAction({
       userId: user.id,
-      organizationId: user.organizationId,
+      organizationId: orgId,
       action: 'COMPLIANCE_REPORT_GENERATED',
       resourceType: 'ComplianceReport',
       resourceId: reportDto.reportType,

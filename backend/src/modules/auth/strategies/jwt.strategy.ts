@@ -5,16 +5,17 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
 import { JwtPayload } from '../types/jwt-payload.types';
 import { getRequiredJwtSecret } from '../utils/jwt-secret.util';
+import { PrismaService } from '../../../prisma';
 
 /**
  * JWT Strategy for Passport authentication
  * Validates JWT tokens and extracts user information
-
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly authService: AuthService,
+    private readonly prisma: PrismaService,
     configService: ConfigService,
   ) {
     super({
@@ -35,13 +36,28 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found');
     }
 
+    let organizationId = payload.organizationId;
+    let role = payload.role;
+
+    if (!organizationId || !role) {
+      const membership = await this.prisma.organizationMember.findFirst({
+        where: { userId: user.id },
+        orderBy: { joinedAt: 'asc' },
+      });
+
+      if (membership) {
+        organizationId = organizationId || membership.organizationId;
+        role = role || membership.role;
+      }
+    }
+
     // Return user object that will be attached to request
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      organizationId: payload.organizationId,
-      role: payload.role,
+      organizationId,
+      role: role || 'DEVELOPER',
     };
   }
 }

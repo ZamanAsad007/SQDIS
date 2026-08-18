@@ -38,15 +38,33 @@ export function DebtPage() {
     queryFn: () => debtService.getHotspots(),
   })
 
-  // Simulated trend data since API might not have it yet
-  const trendData = [
-    { date: 'Week 1', score: 82, debt: 120 },
-    { date: 'Week 2', score: 80, debt: 135 },
-    { date: 'Week 3', score: 78, debt: 150 },
-    { date: 'Week 4', score: 75, debt: 180 },
-    { date: 'Week 5', score: 79, debt: 140 },
-    { date: 'Week 6', score: 84, debt: 110 },
-  ]
+  const trendsQuery = useQuery({
+    queryKey: queryKeys.debt.trends({ days: 30 }),
+    queryFn: () => debtService.getTrends(30),
+  })
+
+  const trendData = useMemo(() => {
+    const rawData = trendsQuery.data
+    const points = Array.isArray(rawData?.data)
+      ? rawData.data
+      : Array.isArray((rawData as any)?.points)
+      ? (rawData as any).points
+      : []
+
+    if (!points || points.length === 0) return []
+
+    return points.map((p: any) => {
+      const d = new Date(p.date)
+      return {
+        date: isNaN(d.getTime())
+          ? p.date || ''
+          : d.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+        debt: Number(p.totalDebt ?? p.debt ?? p.netDebt ?? 0),
+        added: Number(p.addedDebt ?? p.newDebt ?? 0),
+        resolved: Number(p.resolvedDebt ?? 0),
+      }
+    })
+  }, [trendsQuery.data])
 
   const responseData = debtQuery.data
   const items: DebtItem[] = Array.isArray(responseData)
@@ -292,30 +310,77 @@ export function DebtPage() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Activity className="h-4 w-4 text-blue-500" /> Debt Accumulation Trend
-                </CardTitle>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Activity className="h-4 w-4 text-rose-500" /> Debt Accumulation Trend
+                  </CardTitle>
+                  <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+                    30 Days
+                  </span>
+                </div>
+                <CardDescription className="text-xs">
+                  Net technical debt trajectory over time
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[180px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorDebt" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                      <RechartsTooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-                      />
-                      <Area type="monotone" dataKey="debt" name="Debt Score" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorDebt)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="h-[180px] w-full flex items-center justify-center">
+                  {trendsQuery.isLoading ? (
+                    <div className="text-xs text-slate-500">Loading trend trajectory...</div>
+                  ) : trendData.length === 0 || trendData.every((p: { debt: number; added: number }) => p.debt === 0 && p.added === 0) ? (
+                    <div className="text-center p-4">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1.5" />
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        Zero Debt Backlog
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        No technical debt accumulation detected in the selected period.
+                      </p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={trendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorDebt" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.3} />
+                        <XAxis
+                          dataKey="date"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#64748b' }}
+                          dy={10}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#64748b' }}
+                          allowDecimals={false}
+                        />
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: '#0f172a',
+                            borderColor: '#334155',
+                            borderRadius: '8px',
+                            color: '#f8fafc',
+                            fontSize: '12px',
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="debt"
+                          name="Debt Score"
+                          stroke="#f43f5e"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#colorDebt)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
