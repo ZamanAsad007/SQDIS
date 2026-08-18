@@ -47,4 +47,10 @@ export class GoalFiltersDto {
   @IsOptional()
   @Type(() => Number)
   limit?: number = 20;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  pageSize?: number;
 }

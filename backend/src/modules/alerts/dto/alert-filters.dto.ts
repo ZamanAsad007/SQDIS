@@ -21,6 +21,13 @@ export class AlertFiltersDto {
   @Type(() => Number)
   limit?: number = 20;
 
+  @ApiPropertyOptional({ description: 'Items per page (alias for limit)', minimum: 1, default: 20 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  pageSize?: number;
+
   @ApiPropertyOptional({ description: 'Filter by alert severity', enum: AlertSeverity })
   @IsOptional()
   @IsEnum(AlertSeverity)
