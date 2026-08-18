@@ -120,12 +120,12 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'sticky top-0 z-30 flex h-screen flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 select-none shrink-0',
+        'flex h-full flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 select-none shrink-0',
         sidebarCollapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Brand Header */}
-      <div className="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4">
+      <div className="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 shrink-0">
         {!sidebarCollapsed && (
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-lg shadow-sm">
@@ -161,7 +161,7 @@ export function Sidebar() {
 
       {/* Organization Badge / Selector */}
       {currentOrganization && !sidebarCollapsed && (
-        <div className="px-3 py-3 border-b border-slate-100 dark:border-slate-800/80">
+        <div className="px-3 py-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
           <div className="flex items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2 border border-slate-200/60 dark:border-slate-700/50">
             <Building2 className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
             <div className="flex-1 overflow-hidden">
@@ -179,7 +179,7 @@ export function Sidebar() {
       )}
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
         {/* Main Nav */}
         <div className="space-y-1">
           {!sidebarCollapsed && (
