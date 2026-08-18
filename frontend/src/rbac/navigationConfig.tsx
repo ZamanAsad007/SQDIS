@@ -16,10 +16,7 @@ export const NAV_CONFIG: NavItemConfig[] = [
   { label: 'Leaderboard', path: '/leaderboard' },
   { label: 'Commits', path: '/commits' },
   { label: 'Coverage', path: '/coverage' },
-  { label: 'Notifications', path: '/notifications' },
   { label: 'Reviews', path: '/reviews' },
-  { label: 'Goals', path: '/goals' },
-  { label: 'Reports', path: '/reports' },
   {
     label: 'Teams',
     path: '/teams',
@@ -39,6 +36,13 @@ export const NAV_CONFIG: NavItemConfig[] = [
     requiredPermission: 'sprints:view',
   },
   {
+    label: 'Releases',
+    path: '/releases',
+    requiredRole: 'ADMIN',
+    requiredPermission: 'releases:view',
+  },
+  { label: 'Goals', path: '/goals' },
+  {
     label: 'Alerts',
     path: '/alerts',
     requiredRole: 'TEAM_LEAD',
@@ -50,11 +54,12 @@ export const NAV_CONFIG: NavItemConfig[] = [
     requiredRole: 'TEAM_LEAD',
     requiredPermission: 'debt:view',
   },
+  { label: 'Reports', path: '/reports' },
   {
-    label: 'Releases',
-    path: '/releases',
+    label: 'Organization Members',
+    path: '/dashboard/org-members',
     requiredRole: 'ADMIN',
-    requiredPermission: 'releases:view',
+    requiredPermission: 'organization:manage',
   },
   {
     label: 'Onboarding',

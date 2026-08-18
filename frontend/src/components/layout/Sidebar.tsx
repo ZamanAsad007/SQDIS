@@ -33,11 +33,35 @@ import {
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 
-const MAIN_NAV_LABELS = ['Dashboard', 'Teams', 'Projects', 'Leaderboard', 'Reviews', 'Sprints', 'Goals']
-const SECONDARY_NAV_LABELS = ['Alerts', 'Tech Debt', 'Onboarding', 'Reports', 'Audit Logs', 'Audit Analytics', 'Real-Time Monitor']
+const MAIN_NAV_LABELS = [
+  'Dashboard',
+  'Quality Scores',
+  'Developers',
+  'Leaderboard',
+  'Commits',
+  'Coverage',
+  'Reviews',
+  'Teams',
+  'Projects',
+  'Sprints',
+  'Releases',
+  'Goals',
+]
+
+const SECONDARY_NAV_LABELS = [
+  'Alerts',
+  'Tech Debt',
+  'Reports',
+  'Organization Members',
+  'Onboarding',
+  'Audit Logs',
+  'Audit Analytics',
+  'Real-Time Monitor',
+]
 
 const iconMap: Record<string, React.ReactNode> = {
   Dashboard: <LayoutDashboard className="h-5 w-5" />,
+  'Quality Scores': <LineChart className="h-5 w-5" />,
   Developers: <Code2 className="h-5 w-5" />,
   Leaderboard: <Trophy className="h-5 w-5" />,
   Commits: <GitCommit className="h-5 w-5" />,
@@ -52,6 +76,7 @@ const iconMap: Record<string, React.ReactNode> = {
   Alerts: <AlertTriangle className="h-5 w-5" />,
   'Tech Debt': <Flame className="h-5 w-5" />,
   Releases: <Sparkles className="h-5 w-5" />,
+  'Organization Members': <Users className="h-5 w-5" />,
   Onboarding: <UserPlus className="h-5 w-5" />,
   'Audit Logs': <ShieldCheck className="h-5 w-5" />,
   'Audit Analytics': <LineChart className="h-5 w-5" />,
@@ -88,7 +113,7 @@ export function Sidebar() {
   const { currentOrganization } = useOrganizationStore()
   const { user, logout } = useAuthStore()
 
-  const mainNav = navItems.filter((item) => MAIN_NAV_LABELS.includes(item.label) || ['Developers', 'Commits', 'Coverage', 'Notifications'].includes(item.label))
+  const mainNav = navItems.filter((item) => MAIN_NAV_LABELS.includes(item.label))
   const secondaryNav = navItems.filter((item) => SECONDARY_NAV_LABELS.includes(item.label))
   const settingsNav = navItems.filter((item) => item.label === 'Settings')
 

@@ -42,6 +42,7 @@ export { ReportsPage } from './reports/ReportsPage'
 export { DebtPage } from './debt/DebtPage'
 export { AlertsPage } from './alerts/AlertsPage'
 export { OnboardingPage } from './onboarding/OnboardingPage'
+export { OrgMembersPage } from './members/OrgMembersPage'
 
 // Settings pages
 export {
