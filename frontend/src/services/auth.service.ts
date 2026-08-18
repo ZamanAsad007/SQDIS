@@ -8,6 +8,8 @@ import type {
   SwitchOrganizationRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  UpdateProfileRequest,
+  ChangePasswordRequest,
 } from '@/types';
 
 export const authService = {
@@ -44,6 +46,22 @@ export const authService = {
    */
   async getMe(): Promise<User> {
     const response = await api.get<User>('/auth/me');
+    return response.data;
+  },
+
+  /**
+   * Update profile information for current authenticated user
+   */
+  async updateProfile(data: UpdateProfileRequest): Promise<User> {
+    const response = await api.patch<User>('/auth/profile', data);
+    return response.data;
+  },
+
+  /**
+   * Change password for current authenticated user
+   */
+  async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>('/auth/change-password', data);
     return response.data;
   },
 

@@ -34,13 +34,16 @@ export function NotificationSettings() {
   })
 
   const handleToggle = (category: string, channel: 'email' | 'inApp') => {
-    setSettings((prev: any) => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [channel]: !prev[category][channel]
+    setSettings((prev) => {
+      const cat = category as keyof typeof prev
+      return {
+        ...prev,
+        [cat]: {
+          ...prev[cat],
+          [channel]: !prev[cat][channel]
+        }
       }
-    }))
+    })
   }
 
   const handleSave = () => {

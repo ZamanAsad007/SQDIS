@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { membersService } from '@/services'
+import { emailAliasesService, membersService } from '@/services'
 import { queryKeys } from '@/lib/queryClient'
 import { useOrganizationStore } from '@/stores/organizationStore'
 import { QueryState } from '../pageUtils'
+import type { UnmappedEmail, OrganizationMember } from '@/types'
 
 export function UnmappedEmailsPage() {
   const queryClient = useQueryClient()
@@ -20,22 +21,9 @@ export function UnmappedEmailsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedEmails, setSelectedEmails] = useState<string[]>([])
 
-  // Mocking the Unmapped Emails Query since there might not be a direct service yet
   const unmappedEmailsQuery = useQuery({
     queryKey: ['unmapped-emails', currentOrganization?.id],
-    queryFn: () => {
-      // Fake delay and mock data return
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve([
-            { email: 'jenny.developer@old-domain.com', name: 'Jenny Smith', commitCount: 45, lastSeen: '2023-11-10T14:32:00Z', repos: ['backend-api'] },
-            { email: 'bob@contractors.agency', name: 'Bob Bobson', commitCount: 12, lastSeen: '2023-10-01T09:12:00Z', repos: ['frontend-web', 'mobile-app'] },
-            { email: 'noreply@github.com', name: 'GitHub', commitCount: 89, lastSeen: '2023-11-20T11:45:00Z', repos: ['backend-api', 'frontend-web'] },
-            { email: 'admin@sqdis.local', name: 'Admin', commitCount: 3, lastSeen: '2022-01-15T08:00:00Z', repos: ['infrastructure'] },
-          ])
-        }, 800)
-      })
-    },
+    queryFn: () => emailAliasesService.getUnmappedEmails(),
     enabled: !!currentOrganization,
   })
 
@@ -47,18 +35,20 @@ export function UnmappedEmailsPage() {
 
   // Mutations
   const assignMutation = useMutation({
-    mutationFn: ({ email: _email, userId: _userId }: { email: string, userId: string }) => {
-      return new Promise(resolve => setTimeout(resolve, 600))
+    mutationFn: ({ email, userId }: { email: string; userId: string }) => {
+      return emailAliasesService.assignEmail({ email, userId })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unmapped-emails', currentOrganization?.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.all() })
       setSelectedEmails([])
     },
   })
 
   const ignoreMutation = useMutation({
-    mutationFn: (_email: string) => {
-      return new Promise(resolve => setTimeout(resolve, 500))
+    mutationFn: (email: string) => {
+      // Filter out locally if ignored
+      return Promise.resolve(email)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unmapped-emails', currentOrganization?.id] })
@@ -70,8 +60,7 @@ export function UnmappedEmailsPage() {
 
   const filteredEmails = useMemo(() => {
     return unmappedEmails.filter(item => 
-      item.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      item.email.toLowerCase().includes(searchQuery.toLowerCase())
     ).sort((a, b) => b.commitCount - a.commitCount)
   }, [unmappedEmails, searchQuery])
 
@@ -158,40 +147,40 @@ export function UnmappedEmailsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredEmails.map((item: any) => (
-                      <tr key={item.email} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${selectedEmails.includes(item.email) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                        <td className="px-6 py-4">
-                          <input 
-                            type="checkbox" 
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            checked={selectedEmails.includes(item.email)}
-                            onChange={() => toggleSelection(item.email)}
-                          />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0 font-medium">
-                              {item.name.charAt(0).toUpperCase()}
+                    filteredEmails.map((item: UnmappedEmail) => {
+                      const initial = (item.email || 'U').charAt(0).toUpperCase();
+                      const lastSeenDate = item.lastSeenAt || item.firstSeenAt;
+                      return (
+                        <tr key={item.id || item.email} className={`hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors ${selectedEmails.includes(item.email) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                          <td className="px-6 py-4">
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              checked={selectedEmails.includes(item.email)}
+                              onChange={() => toggleSelection(item.email)}
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0 font-medium">
+                                {initial}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-slate-900 dark:text-slate-100 font-mono text-sm">{item.email}</p>
+                                <p className="text-xs text-slate-500">Unassigned author</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-semibold text-slate-900 dark:text-slate-100">{item.name}</p>
-                              <p className="text-xs text-slate-500 font-mono">{item.email}</p>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <Badge variant="secondary" className="font-mono">{item.commitCount ?? 0}</Badge>
+                          </td>
+                          <td className="px-6 py-4 hidden md:table-cell text-slate-500 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {lastSeenDate ? new Date(lastSeenDate).toLocaleDateString() : 'Recent'}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Badge variant="secondary" className="font-mono">{item.commitCount}</Badge>
-                        </td>
-                        <td className="px-6 py-4 hidden md:table-cell text-slate-500 text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {new Date(item.lastSeen).toLocaleDateString()}
-                          </div>
-                          <div className="mt-1 truncate max-w-[120px]" title={item.repos.join(', ')}>
-                            in {item.repos.length} repo{item.repos.length > 1 ? 's' : ''}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
+                          </td>
+                          <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <div className="relative inline-block text-left">
                               <select 
@@ -205,7 +194,7 @@ export function UnmappedEmailsPage() {
                                 defaultValue=""
                               >
                                 <option value="" disabled>Assign to...</option>
-                                {members.map((m: any) => (
+                                {members.map((m: OrganizationMember) => (
                                   <option key={m.id} value={m.userId}>
                                     {m.user?.name || m.user?.email}
                                   </option>
@@ -226,9 +215,10 @@ export function UnmappedEmailsPage() {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
+                    );
+                  })
+                )}
+              </tbody>
               </table>
             </div>
           </QueryState>

@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { EmailAlias, AddEmailAliasRequest } from '@/types';
+import type { EmailAlias, AddEmailAliasRequest, UnmappedEmail, AssignEmailRequest } from '@/types';
 
 export const emailAliasesService = {
   /**
@@ -46,6 +46,29 @@ export const emailAliasesService = {
    */
   async remove(id: string): Promise<void> {
     await api.delete(`/email-aliases/${id}`);
+  },
+
+  /**
+   * Get all unmapped commit author emails for current organization (Admin only)
+   */
+  async getUnmappedEmails(): Promise<UnmappedEmail[]> {
+    const response = await api.get<UnmappedEmail[]>('/admin/unmapped-emails');
+    return response.data;
+  },
+
+  /**
+   * Assign an unmapped email to a team member (Admin only)
+   */
+  async assignEmail(data: AssignEmailRequest): Promise<EmailAlias> {
+    const response = await api.post<EmailAlias>('/admin/email-aliases/assign', data);
+    return response.data;
+  },
+
+  /**
+   * Remove an email alias mapping (Admin only)
+   */
+  async removeEmailMapping(id: string): Promise<void> {
+    await api.delete(`/admin/email-aliases/${id}`);
   },
 };
 

@@ -22,25 +22,30 @@ export function GitHubSettingsPage() {
     queryFn: () => githubService.getStatus(),
   })
 
-  // Mock data for webhook events log since there's no endpoint in githubService yet
-  const webhookLogs = [
-    { id: '1', event: 'push', repo: 'backend-api', status: 'success', time: '2 mins ago', payload: 'refs/heads/main' },
-    { id: '2', event: 'pull_request', repo: 'frontend-web', status: 'success', time: '15 mins ago', payload: 'opened #42' },
-    { id: '3', event: 'issue_comment', repo: 'mobile-app', status: 'success', time: '1 hour ago', payload: 'created' },
-    { id: '4', event: 'push', repo: 'backend-api', status: 'error', time: '3 hours ago', payload: 'timeout' },
-    { id: '5', event: 'pull_request_review', repo: 'frontend-web', status: 'success', time: '5 hours ago', payload: 'submitted' },
-  ]
+  const status = statusQuery.data
+  const isConnected = status?.isConnected ?? status?.connected ?? false
+
+  const webhookLogsQuery = useQuery({
+    queryKey: ['github-webhook-logs'],
+    queryFn: () => githubService.getWebhookLogs(),
+    enabled: isConnected,
+  })
 
   const syncMutation = useMutation({
     mutationFn: () => githubService.syncRepositories(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.github.status })
       queryClient.invalidateQueries({ queryKey: queryKeys.repositories.all() })
+      queryClient.invalidateQueries({ queryKey: ['github-webhook-logs'] })
     },
   })
 
-  const status = statusQuery.data
-  const isConnected = status?.isConnected ?? status?.connected ?? false
+  const retryMutation = useMutation({
+    mutationFn: (deliveryId: string) => githubService.retryWebhookDelivery(deliveryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['github-webhook-logs'] })
+    },
+  })
 
   const scopes = [
     { name: 'repo', description: 'Full control of private repositories', granted: true },
@@ -50,9 +55,12 @@ export function GitHubSettingsPage() {
     { name: 'workflow', description: 'Update GitHub Action workflows', granted: false },
   ]
 
+  const webhookLogs = webhookLogsQuery.data ?? []
+
   const filteredLogs = webhookLogs.filter(log => 
-    log.event.includes(searchLogs.toLowerCase()) || 
-    log.repo.includes(searchLogs.toLowerCase())
+    (log.eventType || '').toLowerCase().includes(searchLogs.toLowerCase()) || 
+    (log.deliveryId || '').toLowerCase().includes(searchLogs.toLowerCase()) ||
+    (log.repositoryId || '').toLowerCase().includes(searchLogs.toLowerCase())
   )
 
   return (
@@ -245,42 +253,65 @@ export function GitHubSettingsPage() {
                   <tr>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Event Type</th>
-                    <th className="px-4 py-3 font-medium">Repository</th>
-                    <th className="px-4 py-3 font-medium">Payload Detail</th>
+                    <th className="px-4 py-3 font-medium">Delivery ID</th>
+                    <th className="px-4 py-3 font-medium">Response / Info</th>
                     <th className="px-4 py-3 font-medium text-right">Time</th>
+                    <th className="px-4 py-3 font-medium text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td className="px-4 py-3">
-                        {log.status === 'success' ? (
+                        {log.status === 'SUCCESS' ? (
                           <Badge variant="success" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-emerald-200 gap-1 px-1.5 py-0.5">
                             <Check className="h-3 w-3" /> 200 OK
                           </Badge>
+                        ) : log.status === 'PENDING' ? (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300 gap-1 px-1.5 py-0.5">
+                            <RefreshCw className="h-3 w-3 animate-spin" /> Pending
+                          </Badge>
                         ) : (
                           <Badge variant="destructive" className="bg-red-50 text-red-700 hover:bg-red-50 border-red-200 gap-1 px-1.5 py-0.5">
-                            <X className="h-3 w-3" /> 504 Error
+                            <X className="h-3 w-3" /> Error
                           </Badge>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-indigo-700 dark:text-indigo-400">
-                          {log.event}
+                          {log.eventType}
                         </code>
                       </td>
-                      <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{log.repo}</td>
-                      <td className="px-4 py-3 text-slate-500 font-mono text-xs truncate max-w-[200px]">{log.payload}</td>
-                      <td className="px-4 py-3 text-right text-slate-500 whitespace-nowrap flex justify-end items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" /> {log.time}
+                      <td className="px-4 py-3 font-mono text-xs text-slate-700 dark:text-slate-300">{log.deliveryId.slice(0, 12)}...</td>
+                      <td className="px-4 py-3 text-slate-500 text-xs truncate max-w-[200px]">
+                        {log.responseTimeMs ? `${log.responseTimeMs}ms` : (log.errorMessage || 'Delivered')}
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-500 whitespace-nowrap text-xs">
+                        <div className="flex justify-end items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {log.status === 'FAILED' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-indigo-600 hover:text-indigo-700"
+                            onClick={() => retryMutation.mutate(log.deliveryId)}
+                            isLoading={retryMutation.isPending}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}
                   {filteredLogs.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                         <Terminal className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        No webhook events match your search.
+                        {webhookLogsQuery.isLoading ? 'Loading webhook deliveries...' : 'No webhook events recorded yet.'}
                       </td>
                     </tr>
                   )}
@@ -288,7 +319,15 @@ export function GitHubSettingsPage() {
               </table>
             </div>
             <div className="mt-4 flex justify-center">
-              <Button variant="outline" size="sm">Load More Events</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => webhookLogsQuery.refetch()}
+                isLoading={webhookLogsQuery.isFetching}
+                className="gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Refresh Delivery Logs
+              </Button>
             </div>
           </CardContent>
         </Card>

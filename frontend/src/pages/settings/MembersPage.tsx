@@ -88,7 +88,7 @@ export function MembersPage() {
   }, [members])
 
   const filteredAndSortedMembers = useMemo(() => {
-    let result = members.filter(member => {
+    const result = members.filter(member => {
       const matchesSearch = 
         member.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
         member.user?.email.toLowerCase().includes(searchQuery.toLowerCase())
