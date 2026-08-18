@@ -186,10 +186,11 @@ export function ProfileSettings() {
             )}
             
             <div className="grid gap-2 max-w-md">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="current-password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Current Password
               </label>
               <Input 
+                id="current-password"
                 type="password"
                 value={passwordData.currentPassword} 
                 onChange={e => setPasswordData({...passwordData, currentPassword: e.target.value})}
@@ -198,10 +199,11 @@ export function ProfileSettings() {
             </div>
             
             <div className="grid gap-2 max-w-md">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="new-password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 New Password
               </label>
               <Input 
+                id="new-password"
                 type="password"
                 value={passwordData.newPassword} 
                 onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})}
@@ -210,10 +212,11 @@ export function ProfileSettings() {
             </div>
             
             <div className="grid gap-2 max-w-md">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="confirm-password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Confirm New Password
               </label>
               <Input 
+                id="confirm-password"
                 type="password"
                 value={passwordData.confirmPassword} 
                 onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})}

@@ -66,7 +66,7 @@ export function InvitationsPage() {
       if (!currentOrganization) throw new Error('No organization')
       const target = invitations.find((i: Invitation) => i.id === invitationId)
       if (!target) throw new Error('Invitation not found')
-      return organizationService.resendInvitation(currentOrganization.id, { email: target.email, role: target.role })
+      return organizationService.resendInvitation(currentOrganization.id, { email: target.email })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.organizations.invitations })
