@@ -36,6 +36,12 @@ export class ReviewFiltersDto {
   limit?: number = 20;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+
+  @IsOptional()
   @IsString()
   repositoryId?: string;
 

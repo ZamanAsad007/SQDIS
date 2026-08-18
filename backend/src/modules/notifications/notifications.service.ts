@@ -52,7 +52,8 @@ export class NotificationsService {
    * Get notifications for a user with filters and pagination
    */
   async findAll(userId: string, organizationId: string, filters: NotificationFiltersDto) {
-    const { type, isRead, startDate, endDate, page = 1, limit = 20 } = filters;
+    const { type, isRead, startDate, endDate, page = 1, limit = 20, pageSize } = filters;
+    const effectiveLimit = pageSize || limit;
 
     const where: Prisma.NotificationWhereInput = {
       userId,
@@ -81,8 +82,8 @@ export class NotificationsService {
       this.prisma.notification.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: (page - 1) * effectiveLimit,
+        take: effectiveLimit,
       }),
       this.prisma.notification.count({ where }),
     ]);
