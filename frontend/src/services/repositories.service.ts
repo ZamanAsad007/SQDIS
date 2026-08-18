@@ -6,8 +6,15 @@ export const repositoriesService = {
    * Get all repositories for the current organization
    */
   async getAll(): Promise<Repository[]> {
-    const response = await api.get<Repository[]>('/github/repositories');
-    return response.data;
+    try {
+      const response = await api.get<Repository[]>('/github/repositories');
+      return response.data || [];
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        return [];
+      }
+      throw err;
+    }
   },
 
   /**

@@ -294,32 +294,64 @@ export class GitHubService {
    * List available repositories from GitHub using Octokit pagination
    */
   async listRepositories(organizationId: string): Promise<RepositoryResponse[]> {
-    const connection = await this.getConnection(organizationId);
-    const pat = this.encryptionService.decrypt(connection.encryptedPAT);
-    const octokit = this.createOctokit(pat);
-
-    const repos = await octokit.paginate(octokit.rest.repos.listForAuthenticatedUser, {
-      sort: 'updated',
-      per_page: 100,
+    const connection = await this.prisma.gitHubConnection.findUnique({
+      where: { organizationId },
     });
 
-    const existingRepos = await this.prisma.repository.findMany({
-      where: { organizationId, githubId: { in: repos.map((r) => r.id) } },
-    });
-
-    const existingRepoMap = new Map(existingRepos.map((r) => [r.githubId, r]));
-
-    return repos.map((repo) => {
-      const existingRepo = existingRepoMap.get(repo.id);
-      return {
-        id: existingRepo?.id || '',
-        githubId: repo.id,
+    if (!connection) {
+      const dbRepos = await this.prisma.repository.findMany({
+        where: { organizationId },
+      });
+      return dbRepos.map((repo) => ({
+        id: repo.id,
+        githubId: repo.githubId,
         name: repo.name,
-        fullName: repo.full_name,
-        isEnabled: existingRepo?.isEnabled || false,
-        lastSyncAt: existingRepo?.lastSyncAt || null,
-      };
-    });
+        fullName: repo.fullName,
+        isEnabled: repo.isEnabled,
+        lastSyncAt: repo.lastSyncAt,
+      }));
+    }
+
+    try {
+      const pat = this.encryptionService.decrypt(connection.encryptedPAT);
+      const octokit = this.createOctokit(pat);
+
+      const repos = await octokit.paginate(octokit.rest.repos.listForAuthenticatedUser, {
+        sort: 'updated',
+        per_page: 100,
+      });
+
+      const existingRepos = await this.prisma.repository.findMany({
+        where: { organizationId, githubId: { in: repos.map((r) => r.id) } },
+      });
+
+      const existingRepoMap = new Map(existingRepos.map((r) => [r.githubId, r]));
+
+      return repos.map((repo) => {
+        const existingRepo = existingRepoMap.get(repo.id);
+        return {
+          id: existingRepo?.id || '',
+          githubId: repo.id,
+          name: repo.name,
+          fullName: repo.full_name,
+          isEnabled: existingRepo?.isEnabled || false,
+          lastSyncAt: existingRepo?.lastSyncAt || null,
+        };
+      });
+    } catch (error: any) {
+      this.logger.warn(`Failed to fetch repositories from GitHub API: ${error?.message}`);
+      const dbRepos = await this.prisma.repository.findMany({
+        where: { organizationId },
+      });
+      return dbRepos.map((repo) => ({
+        id: repo.id,
+        githubId: repo.githubId,
+        name: repo.name,
+        fullName: repo.fullName,
+        isEnabled: repo.isEnabled,
+        lastSyncAt: repo.lastSyncAt,
+      }));
+    }
   }
 
   /**
