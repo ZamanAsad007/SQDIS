@@ -12,6 +12,9 @@ export const CommitChart = lazy(() =>
 export const HeatmapChart = lazy(() =>
   import('./HeatmapChart').then((module) => ({ default: module.HeatmapChart }))
 )
+export const BurndownChart = lazy(() =>
+  import('./BurndownChart').then((module) => ({ default: module.BurndownChart }))
+)
 
 export { ChartSuspense } from './ChartSuspense'
 export type { TrendChartPoint } from './TrendChart'
